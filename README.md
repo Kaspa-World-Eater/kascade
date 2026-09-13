@@ -70,6 +70,13 @@ testnet-10: a fount starts at 0 KAS, delivers a real file, and **claims real tes
 the babels it served (genesis `1216fcf1…`, claim `8af4c616…`, +0.055 KAS to the fount). Same
 kaspa-x402 rail spigot and flume settle on; multi-fount is this once per fount.
 
+**Multi-fount is proven too.** `npx tsx tools/prove-live-swarm.ts`: three founts each hold part of a
+file, a gatherer opens a channel with each, pulls it from all of them, and **each fount claims its own
+share of real testnet KAS** (0 → 0.061 / 0.061 / 0.044 KAS; claims `c76b04d4…`, `b5fdc420…`, `0f528347…`).
+One honest constraint surfaced and is documented: a fount cannot claim **dust** — a claim whose payout is
+below roughly 0.02 KAS trips Kaspa's KIP-9 storage-mass limit (a tiny output is expensive), so a fount
+accumulates earnings and settles in meaningful amounts, the way a Lightning channel is not closed over pennies.
+
 The real commands are there too: `cascade tracker`, `cascade fount <dir> --tracker <url>`, and
 `cascade get <trackerUrl> <fileId>` run founts and gatherers as separate processes.
 
