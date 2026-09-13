@@ -13,7 +13,9 @@
  */
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import type { Voucher, ChannelRef } from 'metered-protocol';
 import type { Manifest } from './manifest.js';
+import { Creditline } from './creditline.js';
 
 /** What a fount physically holds: a manifest and the bytes of the parcels it actually has. */
 export interface Held {
@@ -30,6 +32,35 @@ export interface FountOptions {
    * build a node that serves junk and watch the consumer catch it against the manifest.
    */
   tamper?: (bytes: Uint8Array, fileId: string, index: number) => Uint8Array;
+  /**
+   * Enforce metered's per-parcel rule (SPEC.md 3.5): given the covenant id a request names, the
+   * channel context to bill it against, or null to refuse. When absent the fount serves freely --
+   * the in-process/demo path. When present it extends at most one parcel of credit per channel.
+   */
+  credit?: (covenantId: string) => CreditContext | null;
+}
+
+export interface CreditContext {
+  channel: ChannelRef;
+  buyerPubkey: string;
+}
+
+type Gate = { ok: true; charge: (sompi: number) => void } | { ok: false; error: string };
+
+/** Decide whether a fount may serve one more parcel on this channel, recording any voucher sent. */
+function creditGate(opts: FountOptions, lines: Map<string, Creditline>, covenantId: string, voucherHeader?: string): Gate {
+  if (!opts.credit) return { ok: true, charge: () => undefined };
+  const ctx = opts.credit(covenantId);
+  if (!ctx) return { ok: false, error: 'this fount does not accept that channel' };
+  let line = lines.get(covenantId);
+  if (!line) { line = new Creditline(ctx.channel, ctx.buyerPubkey); lines.set(covenantId, line); }
+  if (voucherHeader) {
+    try { line.recordVoucher(JSON.parse(voucherHeader) as Voucher); }
+    catch { return { ok: false, error: 'voucher rejected' }; }
+  }
+  if (!line.mayServe()) return { ok: false, error: 'a voucher for the parcels already delivered is required first' };
+  const l = line;
+  return { ok: true, charge: (sompi) => l.served(sompi) };
 }
 
 interface HoldingSummary {
@@ -55,6 +86,7 @@ export function fount(opts: FountOptions): { server: Server; url: () => string; 
       parcelSize: h.manifest.parcelSize, indices: [...h.parcels.keys()].sort((a, b) => a - b),
     }));
 
+  const lines = new Map<string, Creditline>();
   const server = createServer((req: IncomingMessage, res: ServerResponse) => {
     const u = new URL(req.url ?? '/', 'http://x');
     if (u.pathname === '/cascade/have') return json(res, 200, summary());
@@ -65,6 +97,9 @@ export function fount(opts: FountOptions): { server: Server; url: () => string; 
       const index = Number(u.searchParams.get('i'));
       const bytes = held.parcels.get(index);
       if (!bytes) return json(res, 404, { error: `parcel ${index} not held here` });
+      const vh = req.headers['x-voucher'];
+      const gate = creditGate(opts, lines, u.searchParams.get('channel') ?? '', typeof vh === 'string' ? vh : undefined);
+      if (!gate.ok) return json(res, 402, { error: gate.error });
       const out = opts.tamper ? opts.tamper(bytes, held.manifest.fileId, index) : bytes;
       res.writeHead(200, {
         'content-type': 'application/octet-stream',
@@ -72,6 +107,7 @@ export function fount(opts: FountOptions): { server: Server; url: () => string; 
         'x-price-sompi': String(bytes.length * opts.priceSompi),
       });
       res.end(Buffer.from(out));
+      gate.charge(bytes.length * opts.priceSompi);
       return;
     }
     json(res, 404, { error: 'no such route' });
