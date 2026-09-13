@@ -2,8 +2,8 @@
  * A swarm receipt becomes money on the rail: pay each provider for what it delivered, on its own
  * channel, and flag the ones that served junk to be slashed.
  *
- * shoal accrues earnings PER PROVIDER as it downloads -- because in a swarm the file came from many
- * sellers, and each is owed only for the chunks it actually served and that verified. This turns that
+ * cascade accrues earnings PER PROVIDER as it downloads -- because in a swarm the file came from many
+ * sellers, and each is owed only for the babels it actually served and that verified. This turns that
  * tally into three lists a caller can act on: who to pay (and on which channel), who to slash (and how
  * badly), and who earned but left nowhere to pay them. It stays pure -- it decides, it moves nothing --
  * so the amounts can be shown and checked before a voucher is signed. The rail itself is spigot's:

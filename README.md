@@ -1,4 +1,4 @@
-# shoal
+# cascade
 
 **A paid, self-verifying delivery swarm on Kaspa. Many devices each hold pieces of a file; you pull
 them in parallel and pay each device for the pieces it served — and a device that serves junk is
@@ -14,7 +14,7 @@ ordinary internet; only the money touches the chain, and it's tiny.
 Kaspa's own stated doctrine is **real-time decentralization**: censorship-resistance, permissionless
 settlement, and competitive mining *in real time, not eventually* — on a fair-launched proof-of-work
 network with no premine. A delivery swarm is that doctrine made physical. It makes **thousands of tiny
-payments a second** — one per chunk, per consumer, per provider — and pays its participants *as they
+payments a second** — one per babel, per consumer, per provider — and pays its participants *as they
 work, continuously*. That is impossible on a chain that takes minutes to settle and costs more than the
 payment itself; today's decentralized CDNs batch payments or lean on a token instead, which quietly
 puts a trusted middle back. Kaspa confirms in about a second at up to ten blocks a second, so the money
@@ -23,17 +23,17 @@ chain is *for*.
 
 ## How a download works
 
-1. A file is content-addressed into a **manifest** — an ordered list of chunk hashes. The manifest
-   names the file; each hash names a chunk.
-2. The consumer asks a **tracker** who holds chunks of that file, and gets a list of providers.
-3. It pulls every chunk **in parallel from whichever providers have it**, and **verifies each chunk
-   against the manifest before believing or paying** — a wrong chunk hashes wrong and is refused.
-4. Each provider is paid for exactly the chunks it served and that verified. A provider that serves
+1. A file is content-addressed into a **manifest** — an ordered list of babel hashes. The manifest
+   names the file; each hash names a babel.
+2. The consumer asks a **tracker** who holds babels of that file, and gets a list of providers.
+3. It pulls every babel **in parallel from whichever providers have it**, and **verifies each babel
+   against the manifest before believing or paying** — a wrong babel hashes wrong and is refused.
+4. Each provider is paid for exactly the babels it served and that verified. A provider that serves
    junk is recorded as a fault, earns nothing for it, and is routed around — the file still completes.
 
-Two guarantees fall out of the manifest for free: **you can't be paid-for junk** (a wrong chunk never
-verifies, so it's never billed) and **you can't be overbilled** (the amount is the chunk's size from a
-manifest you had before you asked). Stopping partway pays only for the chunks that arrived — to the byte.
+Two guarantees fall out of the manifest for free: **you can't be paid-for junk** (a wrong babel never
+verifies, so it's never billed) and **you can't be overbilled** (the amount is the babel's size from a
+manifest you had before you asked). Stopping partway pays only for the babels that arrived — to the byte.
 
 ## What is here
 
@@ -42,9 +42,9 @@ Built test-first. Each file is small and single-purpose.
 | | |
 |---|---|
 | `src/manifest.ts` | content addressing — the whole trust story for delivery |
-| `src/provider.ts` | one node: holds a subset of chunks, serves them by the byte |
-| `src/tracker.ts` | discovery: who holds which chunks (a central tracker — BitTorrent's honest v1) |
-| `src/consumer.ts` | the swarm: parallel pull, per-chunk verify, per-provider pay, reroute, stop |
+| `src/provider.ts` | one node: holds a subset of babels, serves them by the byte |
+| `src/tracker.ts` | discovery: who holds which babels (a central tracker — BitTorrent's honest v1) |
+| `src/consumer.ts` | the swarm: parallel pull, per-babel verify, per-provider pay, reroute, stop |
 | `src/settlement.ts` | a receipt → money on the rail: pay each earner on its channel, flag junk to slash |
 
 ```bash

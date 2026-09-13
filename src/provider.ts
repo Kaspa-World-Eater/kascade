@@ -1,13 +1,13 @@
 /**
- * One node in the swarm: it holds SOME chunks of some files and serves them by the byte.
+ * One node in the swarm: it holds SOME babels of some files and serves them by the byte.
  *
  * A provider is spigot with two changes. It holds a SUBSET of a file, not the whole thing -- a phone
- * can carry a few chunks of what is popular right now -- so it publishes WHICH chunks it has. And it
+ * can carry a few babels of what is popular right now -- so it publishes WHICH babels it has. And it
  * is one of many: the consumer will pull the same file from several providers at once, so no provider
  * is the source, only a source. Everything else -- priced by the byte, counted, paid on the rail -- is
  * the same delivery spigot already proved.
  *
- * The price is carried on each chunk as a header so a consumer knows the cost before it accepts the
+ * The price is carried on each babel as a header so a consumer knows the cost before it accepts the
  * bytes; the actual per-provider settlement is the metered / kaspa-x402 rail, one channel per provider,
  * exactly as spigot opens one. This file only decides which bytes a request means and reads them.
  */
@@ -15,10 +15,10 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { AddressInfo } from 'node:net';
 import type { Manifest } from './manifest.js';
 
-/** What a provider physically holds: a manifest and the bytes of the chunks it actually has. */
+/** What a provider physically holds: a manifest and the bytes of the babels it actually has. */
 export interface Held {
   manifest: Manifest;
-  chunks: Map<number, Uint8Array>;
+  babels: Map<number, Uint8Array>;
 }
 
 export interface ProviderOptions {
@@ -36,7 +36,7 @@ interface HoldingSummary {
   fileId: string;
   name: string;
   size: number;
-  chunkSize: number;
+  babelSize: number;
   indices: number[];
 }
 
@@ -52,19 +52,19 @@ export function provider(opts: ProviderOptions): { server: Server; url: () => st
   const summary = (): HoldingSummary[] =>
     opts.held.map((h) => ({
       fileId: h.manifest.fileId, name: h.manifest.name, size: h.manifest.size,
-      chunkSize: h.manifest.chunkSize, indices: [...h.chunks.keys()].sort((a, b) => a - b),
+      babelSize: h.manifest.babelSize, indices: [...h.babels.keys()].sort((a, b) => a - b),
     }));
 
   const server = createServer((req: IncomingMessage, res: ServerResponse) => {
     const u = new URL(req.url ?? '/', 'http://x');
-    if (u.pathname === '/shoal/have') return json(res, 200, summary());
+    if (u.pathname === '/cascade/have') return json(res, 200, summary());
     const held = byId.get(u.searchParams.get('file') ?? '');
     if (!held) return json(res, 404, { error: 'file not held here' });
-    if (u.pathname === '/shoal/manifest') return json(res, 200, held.manifest);
-    if (u.pathname === '/shoal/chunk') {
+    if (u.pathname === '/cascade/manifest') return json(res, 200, held.manifest);
+    if (u.pathname === '/cascade/babel') {
       const index = Number(u.searchParams.get('i'));
-      const bytes = held.chunks.get(index);
-      if (!bytes) return json(res, 404, { error: `chunk ${index} not held here` });
+      const bytes = held.babels.get(index);
+      if (!bytes) return json(res, 404, { error: `babel ${index} not held here` });
       const out = opts.tamper ? opts.tamper(bytes, held.manifest.fileId, index) : bytes;
       res.writeHead(200, {
         'content-type': 'application/octet-stream',

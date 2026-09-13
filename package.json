@@ -1,14 +1,14 @@
 {
-  "name": "shoal",
+  "name": "cascade",
   "version": "0.0.1",
   "private": true,
-  "description": "A paid, self-verifying delivery swarm on Kaspa: many nodes each hold pieces of a file, a consumer pulls them in parallel and pays per chunk, and a node that serves junk is caught by the manifest.",
+  "description": "A paid, self-verifying delivery swarm on Kaspa: many nodes each hold pieces of a file, a consumer pulls them in parallel and pays per babel, and a node that serves junk is caught by the manifest.",
   "type": "module",
   "engines": { "node": ">=20" },
   "scripts": {
     "test": "node --import tsx --test src/**/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "shoal": "tsx bin/shoal.ts"
+    "cascade": "tsx bin/cascade.ts"
   },
   "dependencies": {
     "metered-protocol": "^2.0.0"

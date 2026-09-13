@@ -1,10 +1,10 @@
 /**
- * Discovery: who holds which chunks of a file. The one small piece of shared state.
+ * Discovery: who holds which babels of a file. The one small piece of shared state.
  *
  * A consumer cannot pull from the swarm until it knows who is in it. The tracker answers exactly one
- * question -- "who has file X, and which chunks?" -- and holds nothing else: no content, no money, no
+ * question -- "who has file X, and which babels?" -- and holds nothing else: no content, no money, no
  * account. It is the least trusted thing in the system, because a lying tracker can only send you to a
- * provider whose chunks you will verify against the manifest anyway; the worst it can do is waste a
+ * provider whose babels you will verify against the manifest anyway; the worst it can do is waste a
  * request, never corrupt a file.
  *
  * This is a plain central tracker, which is the honest v1: it is simple, and it is exactly what
@@ -48,11 +48,11 @@ const send = (res: ServerResponse, code: number, body: unknown): void => {
   res.end(s);
 };
 
-/** Serve a Tracker over HTTP: POST /shoal/announce, GET /shoal/holders?file=<id>. */
+/** Serve a Tracker over HTTP: POST /cascade/announce, GET /cascade/holders?file=<id>. */
 export function trackerServer(tracker = new Tracker()): { server: Server; url: () => string; tracker: Tracker } {
   const server = createServer((req: IncomingMessage, res: ServerResponse) => {
     const u = new URL(req.url ?? '/', 'http://x');
-    if (req.method === 'POST' && u.pathname === '/shoal/announce') {
+    if (req.method === 'POST' && u.pathname === '/cascade/announce') {
       void readJson(req).then((b) => {
         const { fileId, url, indices } = b as { fileId: string; url: string; indices: number[] };
         tracker.announce(fileId, url, indices);
@@ -60,7 +60,7 @@ export function trackerServer(tracker = new Tracker()): { server: Server; url: (
       }).catch(() => send(res, 400, { error: 'bad announce' }));
       return;
     }
-    if (req.method === 'GET' && u.pathname === '/shoal/holders') {
+    if (req.method === 'GET' && u.pathname === '/cascade/holders') {
       return send(res, 200, tracker.holders(u.searchParams.get('file') ?? ''));
     }
     send(res, 404, { error: 'no such route' });
@@ -71,7 +71,7 @@ export function trackerServer(tracker = new Tracker()): { server: Server; url: (
 
 /** A provider tells the tracker what it holds. */
 export async function announceTo(trackerUrl: string, fileId: string, providerUrl: string, indices: number[]): Promise<void> {
-  await fetch(`${trackerUrl}/shoal/announce`, {
+  await fetch(`${trackerUrl}/cascade/announce`, {
     method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ fileId, url: providerUrl, indices }),
   });
@@ -79,6 +79,6 @@ export async function announceTo(trackerUrl: string, fileId: string, providerUrl
 
 /** A consumer asks who holds a file. */
 export async function discover(trackerUrl: string, fileId: string): Promise<Holder[]> {
-  const res = await fetch(`${trackerUrl}/shoal/holders?file=${encodeURIComponent(fileId)}`);
+  const res = await fetch(`${trackerUrl}/cascade/holders?file=${encodeURIComponent(fileId)}`);
   return (await res.json()) as Holder[];
 }
