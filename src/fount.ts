@@ -1,13 +1,13 @@
 /**
- * One node in the meridian: it holds SOME babels of some files and serves them by the byte.
+ * One node in the meridian: it holds SOME parcels of some files and serves them by the byte.
  *
  * A fount is spigot with two changes. It holds a SUBSET of a file, not the whole thing -- a phone
- * can carry a few babels of what is popular right now -- so it publishes WHICH babels it has. And it
+ * can carry a few parcels of what is popular right now -- so it publishes WHICH parcels it has. And it
  * is one of many: the consumer will pull the same file from several founts at once, so no fount
  * is the source, only a source. Everything else -- priced by the byte, counted, paid on the rail -- is
  * the same delivery spigot already proved.
  *
- * The price is carried on each babel as a header so a consumer knows the cost before it accepts the
+ * The price is carried on each parcel as a header so a consumer knows the cost before it accepts the
  * bytes; the actual per-fount settlement is the metered / kaspa-x402 rail, one channel per fount,
  * exactly as spigot opens one. This file only decides which bytes a request means and reads them.
  */
@@ -15,10 +15,10 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { AddressInfo } from 'node:net';
 import type { Manifest } from './manifest.js';
 
-/** What a fount physically holds: a manifest and the bytes of the babels it actually has. */
+/** What a fount physically holds: a manifest and the bytes of the parcels it actually has. */
 export interface Held {
   manifest: Manifest;
-  babels: Map<number, Uint8Array>;
+  parcels: Map<number, Uint8Array>;
 }
 
 export interface FountOptions {
@@ -36,7 +36,7 @@ interface HoldingSummary {
   fileId: string;
   name: string;
   size: number;
-  babelSize: number;
+  parcelSize: number;
   indices: number[];
 }
 
@@ -52,7 +52,7 @@ export function fount(opts: FountOptions): { server: Server; url: () => string; 
   const summary = (): HoldingSummary[] =>
     opts.held.map((h) => ({
       fileId: h.manifest.fileId, name: h.manifest.name, size: h.manifest.size,
-      babelSize: h.manifest.babelSize, indices: [...h.babels.keys()].sort((a, b) => a - b),
+      parcelSize: h.manifest.parcelSize, indices: [...h.parcels.keys()].sort((a, b) => a - b),
     }));
 
   const server = createServer((req: IncomingMessage, res: ServerResponse) => {
@@ -61,10 +61,10 @@ export function fount(opts: FountOptions): { server: Server; url: () => string; 
     const held = byId.get(u.searchParams.get('file') ?? '');
     if (!held) return json(res, 404, { error: 'file not held here' });
     if (u.pathname === '/cascade/manifest') return json(res, 200, held.manifest);
-    if (u.pathname === '/cascade/babel') {
+    if (u.pathname === '/cascade/parcel') {
       const index = Number(u.searchParams.get('i'));
-      const bytes = held.babels.get(index);
-      if (!bytes) return json(res, 404, { error: `babel ${index} not held here` });
+      const bytes = held.parcels.get(index);
+      if (!bytes) return json(res, 404, { error: `parcel ${index} not held here` });
       const out = opts.tamper ? opts.tamper(bytes, held.manifest.fileId, index) : bytes;
       res.writeHead(200, {
         'content-type': 'application/octet-stream',

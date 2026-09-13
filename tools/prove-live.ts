@@ -1,8 +1,8 @@
 /**
- * The money proof, live on Kaspa testnet-10: a fount earns real KAS for babels it delivered.
+ * The money proof, live on Kaspa testnet-10: a fount earns real KAS for parcels it delivered.
  *
  * Nothing here is simulated. A gatherer opens a real kaspa-x402 channel with a fount, pulls a real
- * file over HTTP, verifies every babel against the manifest, signs a voucher for exactly what the
+ * file over HTTP, verifies every parcel against the manifest, signs a voucher for exactly what the
  * fount delivered, and the fount CLAIMS it on chain. The reward is a transaction id and a balance
  * that went up. This is Cascade's delivery feeding the same rail spigot and flume proved.
  *
@@ -37,7 +37,7 @@ async function main(): Promise<void> {
   const fountId = identity('fount');
   const bytes = Uint8Array.from({ length: 300_000 }, (_, i) => (i * 131 + 7) % 251);
   const m = buildManifest('proof.mp4', bytes, 64 * 1024);
-  const all = new Map(m.babels.map((b) => [b.index, bytes.subarray(b.index * m.babelSize, b.index * m.babelSize + b.size)]));
+  const all = new Map(m.parcels.map((b) => [b.index, bytes.subarray(b.index * m.parcelSize, b.index * m.parcelSize + b.size)]));
   const owed = bytes.length * PRICE; // what the fount will have earned, in sompi
 
   console.log(`\n  CASCADE — money proof, live on Kaspa ${NETWORK}\n`);
@@ -46,7 +46,7 @@ async function main(): Promise<void> {
   console.log(`  fount balance before: ${kas(before)} KAS\n`);
 
   // 1. a real fount serving the file
-  const held: Held[] = [{ manifest: m, babels: all }];
+  const held: Held[] = [{ manifest: m, parcels: all }];
   const f = fount({ held, priceSompi: PRICE });
   await new Promise<void>((r) => f.server.listen(0, '127.0.0.1', r));
   const url = `http://127.0.0.1:${(f.server.address() as AddressInfo).port}`;
@@ -57,11 +57,11 @@ async function main(): Promise<void> {
     const { channel, txid: genesis } = await open(gatherer.secretKeyHex, fountId.publicKeyHex, NETWORK, ESCROW, 3600n);
     console.log(`  genesis    ${genesis}\n  covenantId ${channel.covenantId}`);
 
-    // 3. gather the file, verifying every babel
-    const holders: Holder[] = [{ url, indices: m.babels.map((b) => b.index) }];
+    // 3. gather the file, verifying every parcel
+    const holders: Holder[] = [{ url, indices: m.parcels.map((b) => b.index) }];
     const { receipt } = await fetchFile({ manifest: m, holders, priceSompi: PRICE, concurrency: 3 });
     const earned = receipt.perFount[url]?.sompi ?? 0;
-    console.log(`\n  delivered ${receipt.babelsGot}/${m.babels.length} babels, byte-verified; fount earned ${earned.toLocaleString()} sompi (${kas(earned)} KAS)`);
+    console.log(`\n  delivered ${receipt.parcelsGot}/${m.parcels.length} parcels, byte-verified; fount earned ${earned.toLocaleString()} sompi (${kas(earned)} KAS)`);
     if (earned !== owed) throw new Error(`accounting mismatch: earned ${earned}, expected ${owed}`);
 
     // 4. sign a voucher for exactly what was delivered

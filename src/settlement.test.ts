@@ -2,8 +2,8 @@
  * Turning a meridian receipt into money on the rail, pinned FIRST (test-driven):
  *   - every fount that earned and has a channel is paid exactly what it earned, on that channel;
  *   - a fount that earned but registered no channel is reported unsettleable, never dropped;
- *   - a fount that served junk is flagged to slash -- and if it also served good babels, it is
- *     BOTH paid for the good and slashed for the junk, because the two are counted per babel.
+ *   - a fount that served junk is flagged to slash -- and if it also served good parcels, it is
+ *     BOTH paid for the good and slashed for the junk, because the two are counted per parcel.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -11,12 +11,12 @@ import type { Receipt } from './consumer.js';
 import { settlementFor } from './settlement.js';
 
 const receipt = (over: Partial<Receipt>): Receipt => ({
-  perFount: {}, totalSompi: 0, babelsGot: 0, bytesGot: 0, complete: true, faults: [], ...over,
+  perFount: {}, totalSompi: 0, parcelsGot: 0, bytesGot: 0, complete: true, faults: [], ...over,
 });
 
 test('each earner with a channel is paid exactly what it earned, on that channel', () => {
   const r = receipt({
-    perFount: { 'http://a': { babels: 3, bytes: 300, sompi: 600 }, 'http://b': { babels: 1, bytes: 100, sompi: 200 } },
+    perFount: { 'http://a': { parcels: 3, bytes: 300, sompi: 600 }, 'http://b': { parcels: 1, bytes: 100, sompi: 200 } },
     totalSompi: 800,
   });
   const s = settlementFor(r, { 'http://a': 'chan-a', 'http://b': 'chan-b' });
@@ -30,7 +30,7 @@ test('each earner with a channel is paid exactly what it earned, on that channel
 });
 
 test('an earner with no channel is reported unsettleable, not silently dropped', () => {
-  const r = receipt({ perFount: { 'http://a': { babels: 1, bytes: 100, sompi: 200 } }, totalSompi: 200 });
+  const r = receipt({ perFount: { 'http://a': { parcels: 1, bytes: 100, sompi: 200 } }, totalSompi: 200 });
   const s = settlementFor(r, {}); // no channels registered
   assert.equal(s.pay.length, 0);
   assert.deepEqual(s.unsettleable, [{ url: 'http://a', sompi: 200, reason: 'no channel with this fount' }]);
@@ -44,9 +44,9 @@ test('a junk fount is flagged to slash, with its fault count', () => {
   assert.equal(s.pay.length, 0, 'it earned nothing, so it is paid nothing');
 });
 
-test('a mixed fount is BOTH paid for good babels and slashed for junk', () => {
+test('a mixed fount is BOTH paid for good parcels and slashed for junk', () => {
   const r = receipt({
-    perFount: { 'http://m': { babels: 2, bytes: 200, sompi: 400 } },
+    perFount: { 'http://m': { parcels: 2, bytes: 200, sompi: 400 } },
     faults: [{ url: 'http://m', index: 9 }],
     totalSompi: 400,
   });

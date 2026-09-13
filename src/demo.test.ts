@@ -9,7 +9,7 @@ import { runDemo } from './demo.js';
 test('the live Meridian delivers byte-identical, pays per fount, and catches the liar', async () => {
   const d = await runDemo();
   assert.equal(d.byteIdentical, true, 'the file came back exactly as it went out');
-  assert.deepEqual(d.faults.map((f) => f.index).sort((a, b) => a - b), [2, 6], 'the liar was caught on its two babels');
+  assert.deepEqual(d.faults.map((f) => f.index).sort((a, b) => a - b), [2, 6], 'the liar was caught on its two parcels');
   assert.equal(d.faults.every((f) => f.fount === 'fount-LIAR'), true, 'only the liar faulted');
   assert.equal(d.earnings.some((e) => e.fount === 'fount-LIAR'), false, 'the liar earned nothing — junk never bills');
   assert.equal(d.totalPaidSompi, 8 * 64 * 1024 * 2, 'the whole file, once, at the price');

@@ -2,7 +2,7 @@
  * `cascade` — run a fount, a tracker, gather a file, or watch the whole Meridian prove itself.
  *
  *   cascade demo                              a whole Meridian, live, in one process (the proof)
- *   cascade tracker [--port N]                run a tracker: who holds which babels
+ *   cascade tracker [--port N]                run a tracker: who holds which parcels
  *   cascade fount <dir> --tracker <url> [--price N] [--port N]   serve a directory of files
  *   cascade get <trackerUrl> <fileId> [--out FILE] [--price N]   gather a file from the Meridian
  */
@@ -27,19 +27,19 @@ const port = (s: { address: () => unknown }): number => (s.address() as AddressI
 function printDemo(d: DemoResult): void {
   const faultIdx = new Set(d.faults.map((f) => f.index));
   console.log(`\n  CASCADE — live proof, one machine, nothing mocked\n`);
-  console.log(`  A ${d.fileBytes.toLocaleString()}-byte file, split into ${d.babelCount} babels, across ${d.founts.length} founts (one lying).\n`);
+  console.log(`  A ${d.fileBytes.toLocaleString()}-byte file, split into ${d.parcelCount} parcels, across ${d.founts.length} founts (one lying).\n`);
   console.log('  FOUNTS');
   for (const f of d.founts) console.log(`    ${pad(f.name, 12)} holds [${f.holds.join(',')}]${f.honest ? '' : '   ← serves corrupted bytes'}`);
-  console.log('\n  GATHER  (parallel; every babel verified against the manifest before it is believed or paid)');
+  console.log('\n  GATHER  (parallel; every parcel verified against the manifest before it is believed or paid)');
   for (const t of d.trace) {
     const caught = faultIdx.has(t.index) ? '   (fount-LIAR tried first, REJECTED — hash mismatch)' : '';
-    console.log(`    babel ${pad(String(t.index), 2)} ← ${pad(t.from, 12)}${caught}`);
+    console.log(`    parcel ${pad(String(t.index), 2)} ← ${pad(t.from, 12)}${caught}`);
   }
-  console.log(`\n  JUNK CAUGHT   fount-LIAR failed the manifest on babels [${d.faults.map((f) => f.index).join(', ')}] — rerouted, earns nothing.`);
+  console.log(`\n  JUNK CAUGHT   fount-LIAR failed the manifest on parcels [${d.faults.map((f) => f.index).join(', ')}] — rerouted, earns nothing.`);
   console.log(`\n  RESULT        file reassembled ${d.byteIdentical ? 'BYTE-IDENTICAL  ✓  (sha256 matches the source)' : 'WRONG  ✗'}`);
-  console.log('\n  EARNINGS  (verified babels only)');
-  for (const e of d.earnings) console.log(`    ${pad(e.fount, 12)} ${e.babels} babels   ${e.sompi.toLocaleString()} sompi`);
-  console.log(`    ${pad('fount-LIAR', 12)} 0 babels   0 sompi   (caught)`);
+  console.log('\n  EARNINGS  (verified parcels only)');
+  for (const e of d.earnings) console.log(`    ${pad(e.fount, 12)} ${e.parcels} parcels   ${e.sompi.toLocaleString()} sompi`);
+  console.log(`    ${pad('fount-LIAR', 12)} 0 parcels   0 sompi   (caught)`);
   console.log(`    total: ${d.totalPaidSompi.toLocaleString()} sompi (${kas(d.totalPaidSompi)} KAS)`);
   console.log('\n  SETTLEMENT ON THE RAIL  (one voucher per fount; the liar is slashed, not paid)');
   for (const p of d.settlement.pay) console.log(`    PAY    ${pad(p.url, 12)} → ${p.channel}   ${p.sompi.toLocaleString()} sompi`);
@@ -64,16 +64,16 @@ async function serveFount(): Promise<void> {
   const names = readdirSync(root).filter((f) => { const s = statSync(join(root, f)); return s.isFile() && s.size > 0; });
   const held: Held[] = names.map((name) => {
     const bytes = new Uint8Array(readFileSync(join(root, name)));
-    const manifest = buildManifest(name, bytes, num('babel', 64 * 1024));
-    const babels = new Map(manifest.babels.map((b) => [b.index, bytes.subarray(b.index * manifest.babelSize, b.index * manifest.babelSize + b.size)]));
-    return { manifest, babels };
+    const manifest = buildManifest(name, bytes, num('parcel', 64 * 1024));
+    const parcels = new Map(manifest.parcels.map((b) => [b.index, bytes.subarray(b.index * manifest.parcelSize, b.index * manifest.parcelSize + b.size)]));
+    return { manifest, parcels };
   });
   const f = fount({ held, priceSompi: num('price', 2) });
   await new Promise<void>((r) => f.server.listen(num('port', 0), '127.0.0.1', r));
   const url = `http://127.0.0.1:${port(f.server)}`;
-  for (const h of held) await announceTo(trackerUrl, h.manifest.fileId, url, [...h.babels.keys()]);
+  for (const h of held) await announceTo(trackerUrl, h.manifest.fileId, url, [...h.parcels.keys()]);
   console.log(`\n  fount on ${url}  —  serving ${held.length} file(s), ${num('price', 2)} sompi/byte`);
-  for (const h of held) console.log(`    ${h.manifest.fileId.slice(0, 16)}…  ${h.manifest.name}  (${h.manifest.babels.length} babels)`);
+  for (const h of held) console.log(`    ${h.manifest.fileId.slice(0, 16)}…  ${h.manifest.name}  (${h.manifest.parcels.length} parcels)`);
   console.log('');
 }
 
@@ -87,8 +87,8 @@ async function get(): Promise<void> {
   const { bytes, receipt } = await fetchFile({ manifest, holders, priceSompi: num('price', 2), concurrency: 4 });
   const out = flag('out', manifest.name);
   if (receipt.complete) writeFileSync(out, bytes);
-  console.log(`\n  gathered ${receipt.babelsGot}/${manifest.babels.length} babels from ${Object.keys(receipt.perFount).length} fount(s)`);
-  console.log(`  ${receipt.complete ? `wrote ${out}` : 'INCOMPLETE — some babels had no honest holder'}`);
+  console.log(`\n  gathered ${receipt.parcelsGot}/${manifest.parcels.length} parcels from ${Object.keys(receipt.perFount).length} fount(s)`);
+  console.log(`  ${receipt.complete ? `wrote ${out}` : 'INCOMPLETE — some parcels had no honest holder'}`);
   console.log(`  owed ${receipt.totalSompi.toLocaleString()} sompi across the founts that served\n`);
   process.exit(0);
 }

@@ -1,5 +1,5 @@
 <title>Cascade</title>
-<meta name="description" content="A paid, self-verifying delivery network on Kaspa — the crowd's spare bandwidth carries the internet's heavy content, paid per babel in real time. A decentralized replacement for the CDN.">
+<meta name="description" content="A paid, self-verifying delivery network on Kaspa — the crowd's spare bandwidth carries the internet's heavy content, paid per parcel in real time. A decentralized replacement for the CDN.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;700&display=swap">
@@ -145,7 +145,7 @@
     <div class="over">A delivery network owned by everyone</div>
     <h1>The internet's heavy lifting, <em>handed back to the crowd</em>.</h1>
     <p class="lede">Cascade delivers the internet's biggest content — video, downloads, files — from the
-      spare bandwidth of ordinary devices, and <b>pays each one per babel, in real time, on Kaspa.</b>
+      spare bandwidth of ordinary devices, and <b>pays each one per parcel, in real time, on Kaspa.</b>
       It is a decentralized replacement for the handful of companies that own delivery today.</p>
 
     <div class="cascade" id="cascade">
@@ -153,12 +153,12 @@
         <span class="live" id="live">● live</span></div>
       <div class="stage"><canvas id="flowcanvas" width="920" height="200"></canvas></div>
       <div class="tallies">
-        <div><div class="k">Babels delivered</div><div class="v" id="tB">0</div></div>
+        <div><div class="k">Parcels delivered</div><div class="v" id="tB">0</div></div>
         <div><div class="k">Paid to the crowd</div><div class="v g" id="tP">0.00000 KAS</div></div>
         <div><div class="k">Nodes earning</div><div class="v" id="tN">0</div></div>
       </div>
     </div>
-    <p style="font-size:13px;color:var(--faint);margin-top:10px">Each stream is a <b>babel</b> — one
+    <p style="font-size:13px;color:var(--faint);margin-top:10px">Each stream is a <b>parcel</b> — one
       verified, paid piece — flowing from a different node; each gold flash is a micro-payment settling
       on Kaspa. An illustration of Cascade's real behaviour, pinned by tests.</p>
   </div>
@@ -187,7 +187,7 @@
     <p class="body">Cascade takes the one idea that has moved the internet's heaviest files for twenty
       years — a <strong>Meridian</strong>, where many devices each hold pieces and you pull them from all at
       once — and gives it the one thing it always lacked: <strong>a way to pay the people who serve.</strong>
-      Torrents die because seeding is charity. Here, delivering a babel earns money, so serving is a job,
+      Torrents die because seeding is charity. Here, delivering a parcel earns money, so serving is a job,
       and the Meridian has a reason to exist. The bytes move device-to-device over the ordinary internet;
       only the payment touches the chain, and it's tiny.</p>
     <p class="pull">Bytes from the crowd. Money to the crowd. No company owning the middle.</p>
@@ -195,16 +195,16 @@
 
   <section id="how">
     <div class="num">03 — HOW IT WORKS</div>
-    <h2>Pull every babel from whoever's fastest. Verify it. Pay them.</h2>
+    <h2>Pull every parcel from whoever's fastest. Verify it. Pay them.</h2>
     <ol class="flow">
-      <li><b>A file is content-addressed into babels</b> <span>— a manifest of hashes, one per babel. The manifest names the file; each hash names a piece.</span></li>
-      <li><b>Founts announce what they hold</b> <span>— which babels, so a consumer knows who to ask. No fount needs the whole file; a phone can carry a few babels of what's popular.</span></li>
-      <li><b>Babels are pulled in parallel and checked</b> <span>against the manifest before anything is believed or paid. A wrong babel hashes wrong and is refused — no trust required.</span></li>
-      <li><b>Each fount is paid for what it served</b> <span>and verified — a fraction of a cent per babel, on Kaspa. A fount that serves junk earns nothing and is routed around; the file still completes.</span></li>
+      <li><b>A file is content-addressed into parcels</b> <span>— a manifest of hashes, one per parcel. The manifest names the file; each hash names a piece.</span></li>
+      <li><b>Founts announce what they hold</b> <span>— which parcels, so a consumer knows who to ask. No fount needs the whole file; a phone can carry a few parcels of what's popular.</span></li>
+      <li><b>Parcels are pulled in parallel and checked</b> <span>against the manifest before anything is believed or paid. A wrong parcel hashes wrong and is refused — no trust required.</span></li>
+      <li><b>Each fount is paid for what it served</b> <span>and verified — a fraction of a cent per parcel, on Kaspa. A fount that serves junk earns nothing and is routed around; the file still completes.</span></li>
     </ol>
     <div class="twocol">
-      <div class="card"><div class="ic">CAN'T BE PAID JUNK</div><h3>A wrong babel never bills</h3><p>It doesn't match the hash you held before you asked, so it's refused, never paid for. The manifest is the referee — no trust needed for delivery.</p></div>
-      <div class="card"><div class="ic">CAN'T BE OVERBILLED</div><h3>The price is fixed in advance</h3><p>A babel costs its size from the manifest, which you had before the request. A fount can't inflate it. Stop partway and you've paid for exactly what arrived, to the byte.</p></div>
+      <div class="card"><div class="ic">CAN'T BE PAID JUNK</div><h3>A wrong parcel never bills</h3><p>It doesn't match the hash you held before you asked, so it's refused, never paid for. The manifest is the referee — no trust needed for delivery.</p></div>
+      <div class="card"><div class="ic">CAN'T BE OVERBILLED</div><h3>The price is fixed in advance</h3><p>A parcel costs its size from the manifest, which you had before the request. A fount can't inflate it. Stop partway and you've paid for exactly what arrived, to the byte.</p></div>
     </div>
   </section>
 
@@ -245,27 +245,27 @@
       </div>
       <div class="who">
         <div class="role">Founts · the crowd</div>
-        <h3>Serve babels, earn</h3>
-        <p>Spare bandwidth and disk. They cache popular babels and serve them, earning per verified babel. Serve junk, earn nothing.</p>
-        <div class="flow">↑ babels ↑</div>
+        <h3>Serve parcels, earn</h3>
+        <p>Spare bandwidth and disk. They cache popular parcels and serve them, earning per verified parcel. Serve junk, earn nothing.</p>
+        <div class="flow">↑ parcels ↑</div>
       </div>
       <div class="who">
         <div class="role">Gatherer · the viewer</div>
         <h3>Pulls, verifies, pays nothing</h3>
-        <p>Pulls babels, checks each against the manifest, and signs a receipt. That receipt is a fount's proof it earned — junk gets none.</p>
+        <p>Pulls parcels, checks each against the manifest, and signs a receipt. That receipt is a fount's proof it earned — junk gets none.</p>
         <div class="flow">✓ receipts ✓</div>
       </div>
     </div>
     <p class="body" style="margin-top:18px">The viewer is the <strong>meter and the referee</strong>;
       the publisher is the <strong>payer</strong>; the crowd is the <strong>earner</strong>. Cheating is
-      caught for free, because a bad babel never earns a receipt. It's a two-sided market where the money
+      caught for free, because a bad parcel never earns a receipt. It's a two-sided market where the money
       only ever moves for bytes that provably arrived.</p>
   </section>
 
   <section id="why">
     <div class="num">06 — WHY KASPA</div>
     <h2>Paying the crowd as it works needs a chain that settles in real time.</h2>
-    <p class="sub">A delivery network makes thousands of tiny payments a second — one per babel, per
+    <p class="sub">A delivery network makes thousands of tiny payments a second — one per parcel, per
       viewer, per fount. That's impossible if settling takes minutes and costs more than the payment.
       It's why every decentralized-CDN attempt so far either doesn't really pay per use, or batches it and
       leans on a speculative token — quietly putting a trusted middle back.</p>
@@ -352,7 +352,7 @@
   function size(){var r=cv.getBoundingClientRect();W=r.width;H=r.height;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);}
   size(); window.addEventListener('resize',size);
 
-  var NODES=7, nodes=[], viewer, drops=[], babels=0, paid=0;
+  var NODES=7, nodes=[], viewer, drops=[], parcels=0, paid=0;
   function seed(){ nodes=[]; for(var i=0;i<NODES;i++) nodes.push({x:60+Math.random()*70, y:24+(H-48)*(i/(NODES-1))}); viewer={x:W-70,y:H/2}; }
   seed(); window.addEventListener('resize',seed);
   document.getElementById('tN').textContent=String(NODES);
@@ -375,8 +375,8 @@
     for(var i=drops.length-1;i>=0;i--){ var d=drops[i]; d.t+=dt*(reduce?0:1.5); var e=Math.min(d.t,1);
       d.x=d.sx+(viewer.x-d.sx)*e; d.y=d.sy+(viewer.y-d.sy)*e;
       ctx.fillStyle=az; ctx.beginPath(); ctx.roundRect(d.x-4,d.y-3,8,6,2); ctx.fill();
-      if(e>=1 && !d.paid){ d.paid=true; babels++; paid+=0.00002;
-        document.getElementById('tB').textContent=babels.toLocaleString();
+      if(e>=1 && !d.paid){ d.paid=true; parcels++; paid+=0.00002;
+        document.getElementById('tB').textContent=parcels.toLocaleString();
         document.getElementById('tP').textContent=paid.toFixed(5)+' KAS';
         d.flash=0; }
       if(d.paid){ d.flash+=dt*1.8; var fe=Math.min(d.flash,1);
@@ -386,7 +386,7 @@
   }
   function loop(now){ var dt=Math.min((now-last)/1000,0.05); last=now; acc+=dt;
     if(!reduce && acc>0.42){ acc=0; emit(); } frame(dt); requestAnimationFrame(loop); }
-  if(reduce){ for(var k=0;k<4;k++){emit();drops[k].t=0.6;} babels=2048; paid=0.04096;
+  if(reduce){ for(var k=0;k<4;k++){emit();drops[k].t=0.6;} parcels=2048; paid=0.04096;
     document.getElementById('tB').textContent='2,048'; document.getElementById('tP').textContent='0.04096 KAS';
     frame(0);
   } else requestAnimationFrame(loop);

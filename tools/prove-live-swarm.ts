@@ -37,18 +37,18 @@ async function main(): Promise<void> {
   const gatherer = identity('gatherer');
   const bytes = Uint8Array.from({ length: 900_000 }, (_, i) => (i * 131 + 7) % 251);
   const m = buildManifest('proof.mp4', bytes, 64 * 1024);
-  const all = new Map(m.babels.map((b) => [b.index, bytes.subarray(b.index * m.babelSize, b.index * m.babelSize + b.size)]));
+  const all = new Map(m.parcels.map((b) => [b.index, bytes.subarray(b.index * m.parcelSize, b.index * m.parcelSize + b.size)]));
 
-  // three founts, non-overlapping, together holding every babel — so each earns a clean, known share.
+  // three founts, non-overlapping, together holding every parcel — so each earns a clean, known share.
   const layout = [{ name: 'fount-A', holds: [0, 1, 2, 3, 4] }, { name: 'fount-B', holds: [5, 6, 7, 8, 9] }, { name: 'fount-C', holds: [10, 11, 12, 13] }];
   const founts = layout.map((p) => {
     const key = ephemeral();
-    const held: Held[] = [{ manifest: m, babels: new Map(p.holds.map((i) => [i, all.get(i) as Uint8Array])) }];
+    const held: Held[] = [{ manifest: m, parcels: new Map(p.holds.map((i) => [i, all.get(i) as Uint8Array])) }];
     return { ...p, key, f: fount({ held, priceSompi: PRICE }), url: '' };
   });
 
   console.log(`\n  CASCADE — multi-fount money proof, live on Kaspa ${NETWORK}\n`);
-  console.log(`  a ${bytes.length.toLocaleString()}-byte file, ${m.babels.length} babels, across ${founts.length} founts — each starting at 0 KAS\n`);
+  console.log(`  a ${bytes.length.toLocaleString()}-byte file, ${m.parcels.length} parcels, across ${founts.length} founts — each starting at 0 KAS\n`);
 
   await Promise.all(founts.map((n) => new Promise<void>((r) => n.f.server.listen(0, '127.0.0.1', () => r()))));
   for (const n of founts) n.url = `http://127.0.0.1:${(n.f.server.address() as AddressInfo).port}`;
@@ -68,7 +68,7 @@ async function main(): Promise<void> {
     // 2. gather the whole file from all founts at once
     const holders: Holder[] = founts.map((n) => ({ url: n.url, indices: n.holds }));
     const { receipt } = await fetchFile({ manifest: m, holders, priceSompi: PRICE, concurrency: 4 });
-    console.log(`\n  gathered ${receipt.babelsGot}/${m.babels.length} babels, byte-verified across ${Object.keys(receipt.perFount).length} founts\n`);
+    console.log(`\n  gathered ${receipt.parcelsGot}/${m.parcels.length} parcels, byte-verified across ${Object.keys(receipt.perFount).length} founts\n`);
 
     // 3. each fount claims exactly what it delivered
     for (const n of founts) {

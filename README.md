@@ -16,7 +16,7 @@ ordinary internet; only the money touches the chain, and it's tiny.
 Kaspa's own stated doctrine is **real-time decentralization**: censorship-resistance, permissionless
 settlement, and competitive mining *in real time, not eventually* — on a fair-launched proof-of-work
 network with no premine. A delivery Meridian is that doctrine made physical. It makes **thousands of tiny
-payments a second** — one per babel, per consumer, per fount — and pays its participants *as they
+payments a second** — one per parcel, per consumer, per fount — and pays its participants *as they
 work, continuously*. That is impossible on a chain that takes minutes to settle and costs more than the
 payment itself; today's decentralized CDNs batch payments or lean on a token instead, which quietly
 puts a trusted middle back. Kaspa confirms in about a second at up to ten blocks a second, so the money
@@ -25,17 +25,17 @@ chain is *for*.
 
 ## How a download works
 
-1. A file is content-addressed into a **manifest** — an ordered list of babel hashes. The manifest
-   names the file; each hash names a babel.
-2. The consumer asks a **tracker** who holds babels of that file, and gets a list of founts.
-3. It pulls every babel **in parallel from whichever founts have it**, and **verifies each babel
-   against the manifest before believing or paying** — a wrong babel hashes wrong and is refused.
-4. Each fount is paid for exactly the babels it served and that verified. A fount that serves
+1. A file is content-addressed into a **manifest** — an ordered list of parcel hashes. The manifest
+   names the file; each hash names a parcel.
+2. The consumer asks a **tracker** who holds parcels of that file, and gets a list of founts.
+3. It pulls every parcel **in parallel from whichever founts have it**, and **verifies each parcel
+   against the manifest before believing or paying** — a wrong parcel hashes wrong and is refused.
+4. Each fount is paid for exactly the parcels it served and that verified. A fount that serves
    junk is recorded as a fault, earns nothing for it, and is routed around — the file still completes.
 
-Two guarantees fall out of the manifest for free: **you can't be paid-for junk** (a wrong babel never
-verifies, so it's never billed) and **you can't be overbilled** (the amount is the babel's size from a
-manifest you had before you asked). Stopping partway pays only for the babels that arrived — to the byte.
+Two guarantees fall out of the manifest for free: **you can't be paid-for junk** (a wrong parcel never
+verifies, so it's never billed) and **you can't be overbilled** (the amount is the parcel's size from a
+manifest you had before you asked). Stopping partway pays only for the parcels that arrived — to the byte.
 
 ## What is here
 
@@ -44,9 +44,9 @@ Built test-first. Each file is small and single-purpose.
 | | |
 |---|---|
 | `src/manifest.ts` | content addressing — the whole trust story for delivery |
-| `src/fount.ts` | one node: holds a subset of babels, serves them by the byte |
-| `src/tracker.ts` | discovery: who holds which babels (a central tracker — BitTorrent's honest v1) |
-| `src/consumer.ts` | the Meridian: parallel pull, per-babel verify, per-fount pay, reroute, stop |
+| `src/fount.ts` | one node: holds a subset of parcels, serves them by the byte |
+| `src/tracker.ts` | discovery: who holds which parcels (a central tracker — BitTorrent's honest v1) |
+| `src/consumer.ts` | the Meridian: parallel pull, per-parcel verify, per-fount pay, reroute, stop |
 | `src/settlement.ts` | a receipt → money on the rail: pay each earner on its channel, flag junk to slash |
 
 ```bash
@@ -64,12 +64,12 @@ npm run cascade demo    # a whole Meridian, live, in one process -- nothing mock
 `demo` starts four real HTTP founts (one of them lying), splits a real file across them, and gathers
 it back through the same fount/tracker/consumer/settlement code a deployed node would run. You watch
 the liar get **tried first, rejected by the manifest, and routed around**; the file come back
-**byte-identical**; and each fount paid only for the babels it actually served -- the liar earning
+**byte-identical**; and each fount paid only for the parcels it actually served -- the liar earning
 nothing and getting slashed. It is pinned by a test, so it cannot quietly break.
 
 **The money is proven on chain, too.** `npx tsx tools/prove-live.ts` runs it live on Kaspa
 testnet-10: a fount starts at 0 KAS, delivers a real file, and **claims real testnet KAS** for exactly
-the babels it served (genesis `1216fcf1…`, claim `8af4c616…`, +0.055 KAS to the fount). Same
+the parcels it served (genesis `1216fcf1…`, claim `8af4c616…`, +0.055 KAS to the fount). Same
 kaspa-x402 rail spigot and flume settle on; multi-fount is this once per fount.
 
 **Multi-fount is proven too.** `npx tsx tools/prove-live-swarm.ts`: three founts each hold part of a

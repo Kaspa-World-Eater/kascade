@@ -3,7 +3,7 @@
  * channel, and flag the ones that served junk to be slashed.
  *
  * cascade accrues earnings PER FOUNT as it downloads -- because in a meridian the file came from many
- * sellers, and each is owed only for the babels it actually served and that verified. This turns that
+ * sellers, and each is owed only for the parcels it actually served and that verified. This turns that
  * tally into three lists a caller can act on: who to pay (and on which channel), who to slash (and how
  * badly), and who earned but left nowhere to pay them. It stays pure -- it decides, it moves nothing --
  * so the amounts can be shown and checked before a voucher is signed. The rail itself is spigot's:

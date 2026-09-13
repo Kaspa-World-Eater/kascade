@@ -1,10 +1,10 @@
 /**
- * Discovery: who holds which babels of a file. The one small piece of shared state.
+ * Discovery: who holds which parcels of a file. The one small piece of shared state.
  *
  * A consumer cannot pull from the meridian until it knows who is in it. The tracker answers exactly one
- * question -- "who has file X, and which babels?" -- and holds nothing else: no content, no money, no
+ * question -- "who has file X, and which parcels?" -- and holds nothing else: no content, no money, no
  * account. It is the least trusted thing in the system, because a lying tracker can only send you to a
- * fount whose babels you will verify against the manifest anyway; the worst it can do is waste a
+ * fount whose parcels you will verify against the manifest anyway; the worst it can do is waste a
  * request, never corrupt a file.
  *
  * This is a plain central tracker, which is the honest v1: it is simple, and it is exactly what
