@@ -90,6 +90,12 @@ export function fount(opts: FountOptions): { server: Server; url: () => string; 
   const server = createServer((req: IncomingMessage, res: ServerResponse) => {
     const u = new URL(req.url ?? '/', 'http://x');
     if (u.pathname === '/cascade/have') return json(res, 200, summary());
+    if (u.pathname === '/cascade/voucher') {
+      // record a voucher without serving -- how a gatherer pays for the LAST parcel it pulled.
+      const vh = req.headers['x-voucher'];
+      const g = creditGate(opts, lines, u.searchParams.get('channel') ?? '', typeof vh === 'string' ? vh : undefined);
+      return json(res, g.ok ? 200 : 402, g.ok ? { ok: true } : { error: g.error });
+    }
     const held = byId.get(u.searchParams.get('file') ?? '');
     if (!held) return json(res, 404, { error: 'file not held here' });
     if (u.pathname === '/cascade/manifest') return json(res, 200, held.manifest);
