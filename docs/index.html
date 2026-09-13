@@ -185,10 +185,10 @@
     <div class="num">02 — WHAT CASCADE IS</div>
     <h2>BitTorrent, grown up: the crowd delivers, and the crowd gets paid.</h2>
     <p class="body">Cascade takes the one idea that has moved the internet's heaviest files for twenty
-      years — a <strong>swarm</strong>, where many devices each hold pieces and you pull them from all at
+      years — a <strong>Meridian</strong>, where many devices each hold pieces and you pull them from all at
       once — and gives it the one thing it always lacked: <strong>a way to pay the people who serve.</strong>
       Torrents die because seeding is charity. Here, delivering a babel earns money, so serving is a job,
-      and the swarm has a reason to exist. The bytes move device-to-device over the ordinary internet;
+      and the Meridian has a reason to exist. The bytes move device-to-device over the ordinary internet;
       only the payment touches the chain, and it's tiny.</p>
     <p class="pull">Bytes from the crowd. Money to the crowd. No company owning the middle.</p>
   </section>
@@ -198,13 +198,13 @@
     <h2>Pull every babel from whoever's fastest. Verify it. Pay them.</h2>
     <ol class="flow">
       <li><b>A file is content-addressed into babels</b> <span>— a manifest of hashes, one per babel. The manifest names the file; each hash names a piece.</span></li>
-      <li><b>Providers announce what they hold</b> <span>— which babels, so a consumer knows who to ask. No provider needs the whole file; a phone can carry a few babels of what's popular.</span></li>
+      <li><b>Founts announce what they hold</b> <span>— which babels, so a consumer knows who to ask. No fount needs the whole file; a phone can carry a few babels of what's popular.</span></li>
       <li><b>Babels are pulled in parallel and checked</b> <span>against the manifest before anything is believed or paid. A wrong babel hashes wrong and is refused — no trust required.</span></li>
-      <li><b>Each provider is paid for what it served</b> <span>and verified — a fraction of a cent per babel, on Kaspa. A provider that serves junk earns nothing and is routed around; the file still completes.</span></li>
+      <li><b>Each fount is paid for what it served</b> <span>and verified — a fraction of a cent per babel, on Kaspa. A fount that serves junk earns nothing and is routed around; the file still completes.</span></li>
     </ol>
     <div class="twocol">
       <div class="card"><div class="ic">CAN'T BE PAID JUNK</div><h3>A wrong babel never bills</h3><p>It doesn't match the hash you held before you asked, so it's refused, never paid for. The manifest is the referee — no trust needed for delivery.</p></div>
-      <div class="card"><div class="ic">CAN'T BE OVERBILLED</div><h3>The price is fixed in advance</h3><p>A babel costs its size from the manifest, which you had before the request. A provider can't inflate it. Stop partway and you've paid for exactly what arrived, to the byte.</p></div>
+      <div class="card"><div class="ic">CAN'T BE OVERBILLED</div><h3>The price is fixed in advance</h3><p>A babel costs its size from the manifest, which you had before the request. A fount can't inflate it. Stop partway and you've paid for exactly what arrived, to the byte.</p></div>
     </div>
   </section>
 
@@ -244,7 +244,7 @@
         <div class="flow">— KAS →</div>
       </div>
       <div class="who">
-        <div class="role">Providers · the crowd</div>
+        <div class="role">Founts · the crowd</div>
         <h3>Serve babels, earn</h3>
         <p>Spare bandwidth and disk. They cache popular babels and serve them, earning per verified babel. Serve junk, earn nothing.</p>
         <div class="flow">↑ babels ↑</div>
@@ -252,7 +252,7 @@
       <div class="who">
         <div class="role">Gatherer · the viewer</div>
         <h3>Pulls, verifies, pays nothing</h3>
-        <p>Pulls babels, checks each against the manifest, and signs a receipt. That receipt is a provider's proof it earned — junk gets none.</p>
+        <p>Pulls babels, checks each against the manifest, and signs a receipt. That receipt is a fount's proof it earned — junk gets none.</p>
         <div class="flow">✓ receipts ✓</div>
       </div>
     </div>
@@ -266,7 +266,7 @@
     <div class="num">06 — WHY KASPA</div>
     <h2>Paying the crowd as it works needs a chain that settles in real time.</h2>
     <p class="sub">A delivery network makes thousands of tiny payments a second — one per babel, per
-      viewer, per provider. That's impossible if settling takes minutes and costs more than the payment.
+      viewer, per fount. That's impossible if settling takes minutes and costs more than the payment.
       It's why every decentralized-CDN attempt so far either doesn't really pay per use, or batches it and
       leans on a speculative token — quietly putting a trusted middle back.</p>
     <div class="callout">
@@ -308,13 +308,13 @@
       project that hides its hard parts isn't one you should trust with the internet's plumbing.</p>
     <div class="honest">
       <div class="row"><div class="h">Getting bytes between phones is hard</div><div class="b">Mobile carrier networks hide devices, so two phones can't just connect. This needs relays or hole-punching, and it's the single biggest engineering risk. Early on, PCs, routers and relays carry the network; phones start as viewers and Wi-Fi cache-holders, not the backbone.</div></div>
-      <div class="row"><div class="h">It won't beat Cloudflare on reliability</div><div class="b">A big CDN is fast, has contracts and legal accountability; a swarm is messier. Cascade competes on price, reach, and being unownable — not on being flatly more reliable, at least at first.</div></div>
+      <div class="row"><div class="h">It won't beat Cloudflare on reliability</div><div class="b">A big CDN is fast, has contracts and legal accountability; the Meridian is messier. Cascade competes on price, reach, and being unownable — not on being flatly more reliable, at least at first.</div></div>
       <div class="row"><div class="h">Supply needs demand</div><div class="b">Nodes won't run for pennies with nobody buying. One real publisher delivering through it matters more than a thousand idle nodes. That, not the tech, is the hard bootstrap.</div></div>
-      <div class="row"><div class="h">Content it serves is public</div><div class="b">A swarm serving whatever it's handed inherits the abuse problems every CDN has. Content is addressed by hash and providers serve only catalogues they opted into — but this is real work, not a solved problem.</div></div>
+      <div class="row"><div class="h">Content it serves is public</div><div class="b">The Meridian serving whatever it's handed inherits the abuse problems every CDN has. Content is addressed by hash and founts serve only catalogues they opted into — but this is real work, not a solved problem.</div></div>
     </div>
     <div class="status">
-      <b>What's actually built, today:</b> the swarm runs end to end and is <span class="ok">pinned by tests</span> —
-      a file reassembles byte-identical from several providers at once, each paid its share; a provider
+      <b>What's actually built, today:</b> the Meridian runs end to end and is <span class="ok">pinned by tests</span> —
+      a file reassembles byte-identical from several founts at once, each paid its share; a fount
       serving corrupted bytes is caught by the manifest, paid nothing, and routed around; stopping partway
       pays only for what arrived. It settles on the same Kaspa rail proven on testnet by its siblings.
       <br><br>
