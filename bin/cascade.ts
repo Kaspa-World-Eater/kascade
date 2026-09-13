@@ -9,11 +9,11 @@
 import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { AddressInfo } from 'node:net';
-import { buildManifest } from '../src/manifest.js';
 import { fount, type Held } from '../src/fount.js';
 import { trackerServer, announceTo, discover } from '../src/tracker.js';
 import { fetchFile } from '../src/consumer.js';
 import { runDemo, type DemoResult } from '../src/demo.js';
+import { stock } from '../src/stock.js';
 
 const argv = process.argv.slice(2);
 const [command, ...rest] = argv;
@@ -62,19 +62,16 @@ async function serveFount(): Promise<void> {
   if (!dir || !trackerUrl) { console.error('usage: cascade fount <dir> --tracker <url> [--price N]'); process.exit(1); }
   const root = resolve(dir);
   const names = readdirSync(root).filter((f) => { const s = statSync(join(root, f)); return s.isFile() && s.size > 0; });
-  const held: Held[] = names.map((name) => {
-    const bytes = new Uint8Array(readFileSync(join(root, name)));
-    const manifest = buildManifest(name, bytes, num('parcel', 64 * 1024));
-    const parcels = new Map(manifest.parcels.map((b) => [b.index, bytes.subarray(b.index * manifest.parcelSize, b.index * manifest.parcelSize + b.size)]));
-    return { manifest, parcels };
-  });
+  const files = names.map((name) => ({ name, bytes: new Uint8Array(readFileSync(join(root, name))) }));
+  const capMB = num('cap', 1024); // --cap in MB, default 1 GB; the fount never holds more
+  const { held, cache } = stock(files, capMB * 1024 * 1024, num('parcel', 64 * 1024));
   const f = fount({ held, priceSompi: num('price', 2) });
   await new Promise<void>((r) => f.server.listen(num('port', 0), '127.0.0.1', r));
   const url = `http://127.0.0.1:${port(f.server)}`;
   for (const h of held) await announceTo(trackerUrl, h.manifest.fileId, url, [...h.parcels.keys()]);
   console.log(`\n  fount on ${url}  —  serving ${held.length} file(s), ${num('price', 2)} sompi/byte`);
-  for (const h of held) console.log(`    ${h.manifest.fileId.slice(0, 16)}…  ${h.manifest.name}  (${h.manifest.parcels.length} parcels)`);
-  console.log('');
+  for (const h of held) console.log(`    ${h.manifest.fileId.slice(0, 16)}…  ${h.manifest.name}  (${h.parcels.size}/${h.manifest.parcels.length} parcels held)`);
+  console.log(`  holding ${(cache.usedBytes() / 1048576).toFixed(1)} MB of a ${capMB} MB budget\n`);
 }
 
 async function get(): Promise<void> {
