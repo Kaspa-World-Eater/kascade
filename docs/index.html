@@ -1,0 +1,394 @@
+<title>Cascade</title>
+<meta name="description" content="A paid, self-verifying delivery network on Kaspa — the crowd's spare bandwidth carries the internet's heavy content, paid per babel in real time. A decentralized replacement for the CDN.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+  :root{
+    --bg:#eef1f6; --surface:#ffffff; --surface-2:#f4f7fb;
+    --ink:#0d1424; --muted:#4c5670; --faint:#7b849c; --line:#dbe1ee;
+    --azure:#1d5fd4; --azure-deep:#123e93; --azure-soft:#dce8fb;
+    --cyan:#0a95ab; --gold:#b0751a; --warn:#bd4630;
+    --shadow:0 1px 2px rgba(13,20,36,.05),0 12px 30px -16px rgba(13,20,36,.24);
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#080b14; --surface:#10141f; --surface-2:#0c101a; --ink:#e8ecf7; --muted:#9aa4c0;
+      --faint:#667090; --line:#1e2740; --azure:#5b8bf0; --azure-deep:#a9c2ff; --azure-soft:#111c34;
+      --cyan:#3fd0e2; --gold:#e0a94a; --warn:#ef7a5f;
+      --shadow:0 1px 2px rgba(0,0,0,.5),0 16px 36px -18px rgba(0,0,0,.72);
+    }
+  }
+  :root[data-theme="dark"]{
+      --bg:#080b14; --surface:#10141f; --surface-2:#0c101a; --ink:#e8ecf7; --muted:#9aa4c0;
+      --faint:#667090; --line:#1e2740; --azure:#5b8bf0; --azure-deep:#a9c2ff; --azure-soft:#111c34;
+      --cyan:#3fd0e2; --gold:#e0a94a; --warn:#ef7a5f;
+      --shadow:0 1px 2px rgba(0,0,0,.5),0 16px 36px -18px rgba(0,0,0,.72);
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg); color:var(--ink); font-family:"Public Sans",system-ui,sans-serif; line-height:1.62; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:960px; margin:0 auto; padding:0 24px}
+  .narrow{max-width:680px}
+  h1,h2,h3{font-family:"Bricolage Grotesque","Public Sans",sans-serif; line-height:1.06; text-wrap:balance; letter-spacing:-.02em; margin:0}
+  a{color:var(--azure-deep); text-decoration-color:color-mix(in srgb,var(--azure) 45%,transparent); text-underline-offset:3px}
+  a:hover{text-decoration-color:var(--azure)}
+  code,.mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+  .eyebrow{font-family:"JetBrains Mono",monospace; font-size:12px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--azure-deep)}
+
+  header.top{display:flex; align-items:center; justify-content:space-between; padding:22px 0 8px}
+  .brand{display:flex; align-items:center; gap:10px; font-family:"Bricolage Grotesque"; font-weight:800; font-size:20px}
+  .toplinks{display:flex; gap:18px; font-size:14px}
+  .toplinks a{color:var(--muted); text-decoration:none}
+  .toplinks a:hover{color:var(--ink)}
+
+  /* hero */
+  .hero{padding:30px 0 14px}
+  .hero .over{font-family:"JetBrains Mono",monospace; font-size:12.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--cyan); font-weight:700}
+  .hero h1{font-size:clamp(40px,7.4vw,78px); font-weight:800; letter-spacing:-.035em; margin-top:16px}
+  .hero h1 em{font-style:normal; color:var(--azure-deep)}
+  .hero .lede{font-size:clamp(18px,2.3vw,23px); color:var(--muted); max-width:42ch; margin:20px 0 0; line-height:1.42}
+  .hero .lede b{color:var(--ink); font-weight:600}
+
+  .cascade{margin:28px 0 6px; background:var(--surface); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); overflow:hidden}
+  .cascade .cap{display:flex; gap:10px; align-items:center; padding:14px 18px; border-bottom:1px solid var(--line); font-size:13px; color:var(--faint)}
+  .cascade .cap b{color:var(--ink); font-weight:600}
+  .cascade .cap .live{margin-left:auto; font-family:"JetBrains Mono",monospace; font-size:12px; font-weight:700; color:var(--cyan); text-transform:uppercase; letter-spacing:.07em}
+  .stage{position:relative; height:200px}
+  #flowcanvas{display:block;width:100%;height:100%}
+  .cascade .tallies{display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--line); border-top:1px solid var(--line)}
+  .cascade .tallies>div{background:var(--surface); padding:11px 16px}
+  .cascade .tallies .k{font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--faint)}
+  .cascade .tallies .v{font-family:"JetBrains Mono",monospace; font-weight:700; font-size:19px; color:var(--ink); font-variant-numeric:tabular-nums}
+  .cascade .tallies .v.g{color:var(--gold)}
+
+  section{padding:42px 0; border-top:1px solid var(--line)}
+  .num{font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--faint); letter-spacing:.1em}
+  section h2{font-size:clamp(26px,4.2vw,38px); font-weight:700; letter-spacing:-.025em; max-width:22ch; margin-top:6px}
+  .sub{color:var(--muted); font-size:17px; max-width:66ch; margin:16px 0 0}
+  p{margin:15px 0 0} p.body{max-width:66ch; color:var(--muted); font-size:16.5px}
+  strong{color:var(--ink); font-weight:600}
+  .pull{font-family:"Bricolage Grotesque"; font-weight:700; font-size:clamp(21px,3vw,27px); line-height:1.25; letter-spacing:-.02em; color:var(--ink); max-width:20ch; margin:0}
+
+  .stat3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:26px}
+  @media (max-width:680px){.stat3{grid-template-columns:1fr}}
+  .stat{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:20px; box-shadow:var(--shadow)}
+  .stat .big{font-family:"Bricolage Grotesque"; font-weight:800; font-size:34px; color:var(--azure-deep); letter-spacing:-.02em}
+  .stat .cap2{font-size:14px; color:var(--muted); margin-top:6px}
+
+  ol.flow{list-style:none; counter-reset:s; padding:0; margin:24px 0 0; display:grid; gap:2px}
+  ol.flow li{counter-increment:s; display:grid; grid-template-columns:auto 1fr; gap:16px; padding:15px 4px; border-bottom:1px solid var(--line)}
+  ol.flow li:last-child{border-bottom:0}
+  ol.flow li::before{content:counter(s,decimal-leading-zero); font-family:"JetBrains Mono",monospace; font-weight:700; font-size:13px; color:var(--azure); padding-top:3px}
+  ol.flow b{font-weight:600} ol.flow span{color:var(--muted); font-size:15px}
+
+  .twocol{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:24px}
+  @media (max-width:700px){.twocol{grid-template-columns:1fr}}
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:20px; box-shadow:var(--shadow)}
+  .card h3{font-size:18px; font-weight:700; margin-bottom:3px}
+  .card p{font-size:14.5px; color:var(--muted); margin-top:6px}
+  .card .ic{font-family:"JetBrains Mono",monospace; font-size:12px; font-weight:700; color:var(--azure-deep); letter-spacing:.08em}
+
+  table.rep{width:100%; border-collapse:collapse; margin-top:22px; font-size:15px}
+  table.rep th,table.rep td{text-align:left; padding:12px 14px; border-bottom:1px solid var(--line); vertical-align:top}
+  table.rep thead th{font-family:"JetBrains Mono",monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint)}
+  table.rep .yes{color:var(--azure-deep); font-weight:600}
+  table.rep .no{color:var(--warn); font-weight:600}
+  .tblscroll{overflow-x:auto}
+
+  .market{display:grid; grid-template-columns:1fr 1fr 1fr; gap:0; margin-top:24px; border:1px solid var(--line); border-radius:14px; overflow:hidden; box-shadow:var(--shadow)}
+  @media (max-width:700px){.market{grid-template-columns:1fr}}
+  .market .who{padding:20px; background:var(--surface); border-right:1px solid var(--line)}
+  .market .who:last-child{border-right:0}
+  @media (max-width:700px){.market .who{border-right:0; border-bottom:1px solid var(--line)}}
+  .market .role{font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--azure-deep)}
+  .market h3{font-size:17px; font-weight:700; margin:8px 0 0}
+  .market p{font-size:14px; color:var(--muted); margin-top:7px}
+  .market .flow{font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--gold); font-weight:700; margin-top:12px}
+
+  .callout{margin-top:24px; background:var(--azure-soft); border:1px solid color-mix(in srgb,var(--azure) 34%,transparent); border-radius:14px; padding:24px 26px}
+  .callout h3{font-size:20px; font-weight:700; color:var(--azure-deep)}
+  .callout p{color:var(--ink); font-size:16px; max-width:64ch}
+
+  .sov p{max-width:66ch; color:var(--muted); font-size:16.5px}
+  .sov p b{color:var(--ink)}
+
+  .honest{margin-top:22px; display:grid; gap:2px}
+  .honest .row{display:grid; grid-template-columns:210px 1fr; gap:16px; padding:14px 4px; border-bottom:1px solid var(--line)}
+  .honest .row:last-child{border-bottom:0}
+  .honest .h{font-weight:600; color:var(--ink); font-size:15px}
+  .honest .b{color:var(--muted); font-size:15px}
+  @media (max-width:640px){.honest .row{grid-template-columns:1fr; gap:4px}}
+  .status{margin-top:20px; background:var(--surface-2); border:1px solid var(--line); border-radius:12px; padding:18px 20px; font-size:15px; color:var(--muted)}
+  .status b{color:var(--ink)} .status .ok{color:var(--azure-deep); font-weight:600}
+
+  .stack{display:flex; gap:14px; flex-wrap:wrap; margin-top:22px}
+  .btn{display:inline-flex; align-items:center; gap:9px; font-weight:600; font-size:15px; text-decoration:none; padding:12px 20px; border-radius:11px; border:1px solid var(--line); color:var(--ink); background:var(--surface)}
+  .btn.primary{background:var(--azure); border-color:var(--azure); color:#fff}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn.primary{color:#080b14}}
+  :root[data-theme="dark"] .btn.primary{color:#080b14}
+  .btn:hover{border-color:var(--azure)}
+
+  footer{border-top:1px solid var(--line); margin-top:8px; padding:30px 0 60px; color:var(--faint); font-size:14px}
+  footer a{color:var(--muted)}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">💧 Cascade</div>
+    <nav class="toplinks">
+      <a href="#how">How</a><a href="#replaces">What it replaces</a><a href="#why">Why Kaspa</a><a href="#sovereignty">Why it matters</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <div class="over">A delivery network owned by everyone</div>
+    <h1>The internet's heavy lifting, <em>handed back to the crowd</em>.</h1>
+    <p class="lede">Cascade delivers the internet's biggest content — video, downloads, files — from the
+      spare bandwidth of ordinary devices, and <b>pays each one per babel, in real time, on Kaspa.</b>
+      It is a decentralized replacement for the handful of companies that own delivery today.</p>
+
+    <div class="cascade" id="cascade">
+      <div class="cap">delivering <b>a 500 MB video</b> from the crowd, paying as it flows
+        <span class="live" id="live">● live</span></div>
+      <div class="stage"><canvas id="flowcanvas" width="920" height="200"></canvas></div>
+      <div class="tallies">
+        <div><div class="k">Babels delivered</div><div class="v" id="tB">0</div></div>
+        <div><div class="k">Paid to the crowd</div><div class="v g" id="tP">0.00000 KAS</div></div>
+        <div><div class="k">Nodes earning</div><div class="v" id="tN">0</div></div>
+      </div>
+    </div>
+    <p style="font-size:13px;color:var(--faint);margin-top:10px">Each stream is a <b>babel</b> — one
+      verified, paid piece — flowing from a different node; each gold flash is a micro-payment settling
+      on Kaspa. An illustration of Cascade's real behaviour, pinned by tests.</p>
+  </div>
+
+  <section id="problem">
+    <div class="num">01 — THE PROBLEM</div>
+    <h2>Five companies deliver the internet. That's a fragility, and a chokepoint.</h2>
+    <p class="body">Almost everything you load — a video, an app update, a news site — doesn't come from
+      the website you visited. It comes from a <strong>cache near you</strong> run by Cloudflare, Akamai,
+      or Amazon. This layer, the Content Delivery Network, is most of what makes the internet feel fast.
+      It is also owned by a handful of firms — and that concentration has a cost we've all paid.</p>
+    <div class="stat3">
+      <div class="stat"><div class="big">~1 in 5</div><div class="cap2">of all websites sit behind a single company, Cloudflare. When it stumbles, so does a fifth of the web.</div></div>
+      <div class="stat"><div class="big">~1 hour</div><div class="cap2">of a single 2021 CDN outage was enough to knock Reddit, Amazon, Spotify, the NYT and government sites offline at once.</div></div>
+      <div class="stat"><div class="big">One call</div><div class="cap2">from one company's trust-and-safety desk can make a site vanish from the internet — whatever you think of the site, that's a lot of power in one place.</div></div>
+    </div>
+    <p class="body" style="margin-top:22px">None of this is villainy — it's what happens when critical
+      infrastructure is owned by a few. A single point of speed becomes a single point of failure, of
+      billing power, and of control over what stays online. <strong>The delivery layer of the internet
+      was never supposed to belong to five companies.</strong></p>
+  </section>
+
+  <section id="what">
+    <div class="num">02 — WHAT CASCADE IS</div>
+    <h2>BitTorrent, grown up: the crowd delivers, and the crowd gets paid.</h2>
+    <p class="body">Cascade takes the one idea that has moved the internet's heaviest files for twenty
+      years — a <strong>swarm</strong>, where many devices each hold pieces and you pull them from all at
+      once — and gives it the one thing it always lacked: <strong>a way to pay the people who serve.</strong>
+      Torrents die because seeding is charity. Here, delivering a babel earns money, so serving is a job,
+      and the swarm has a reason to exist. The bytes move device-to-device over the ordinary internet;
+      only the payment touches the chain, and it's tiny.</p>
+    <p class="pull">Bytes from the crowd. Money to the crowd. No company owning the middle.</p>
+  </section>
+
+  <section id="how">
+    <div class="num">03 — HOW IT WORKS</div>
+    <h2>Pull every babel from whoever's fastest. Verify it. Pay them.</h2>
+    <ol class="flow">
+      <li><b>A file is content-addressed into babels</b> <span>— a manifest of hashes, one per babel. The manifest names the file; each hash names a piece.</span></li>
+      <li><b>Providers announce what they hold</b> <span>— which babels, so a consumer knows who to ask. No provider needs the whole file; a phone can carry a few babels of what's popular.</span></li>
+      <li><b>Babels are pulled in parallel and checked</b> <span>against the manifest before anything is believed or paid. A wrong babel hashes wrong and is refused — no trust required.</span></li>
+      <li><b>Each provider is paid for what it served</b> <span>and verified — a fraction of a cent per babel, on Kaspa. A provider that serves junk earns nothing and is routed around; the file still completes.</span></li>
+    </ol>
+    <div class="twocol">
+      <div class="card"><div class="ic">CAN'T BE PAID JUNK</div><h3>A wrong babel never bills</h3><p>It doesn't match the hash you held before you asked, so it's refused, never paid for. The manifest is the referee — no trust needed for delivery.</p></div>
+      <div class="card"><div class="ic">CAN'T BE OVERBILLED</div><h3>The price is fixed in advance</h3><p>A babel costs its size from the manifest, which you had before the request. A provider can't inflate it. Stop partway and you've paid for exactly what arrived, to the byte.</p></div>
+    </div>
+  </section>
+
+  <section id="replaces">
+    <div class="num">04 — WHAT IT REPLACES</div>
+    <h2>The delivery bill, not your wallet — and not the server.</h2>
+    <p class="sub">Cascade replaces the CDN — the part of the cloud that <em>moves finished bytes</em> —
+      not the server that runs an app. And it competes on the publisher's bill: today a site pays
+      Cloudflare to deliver its video to you; with Cascade it pays the crowd's spare bandwidth instead,
+      for less. <strong>You still watch for free — the crowd is paid, not you.</strong></p>
+    <div class="tblscroll">
+    <table class="rep">
+      <thead><tr><th>Cascade delivers this</th><th>Cascade can't — a server must</th></tr></thead>
+      <tbody>
+        <tr><td class="yes">A video, a song, a podcast</td><td class="no">Your personalized feed or inbox</td></tr>
+        <tr><td class="yes">A game or app download, an OS update</td><td class="no">Search results, a checkout, a dashboard</td></tr>
+        <tr><td class="yes">Images, fonts, a site's JS/CSS bundle</td><td class="no">The dynamic HTML built per request</td></tr>
+        <tr><td class="yes">A big public dataset; a fully static site</td><td class="no">Anything private or per-user</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="body" style="margin-top:18px">The rule is simple: Cascade carries <strong>bytes that are
+      the same for everyone</strong> — which happens to be most of the internet's actual weight (video
+      alone is well over half of all traffic). Anything generated on the fly, just for you, stays on a
+      server. The closest thing that exists is <strong>IPFS — but with the real-time payment layer it
+      never had.</strong></p>
+  </section>
+
+  <section id="market">
+    <div class="num">05 — THE MARKET</div>
+    <h2>Publisher funds it. The crowd earns it. The viewer never sees it.</h2>
+    <div class="market">
+      <div class="who">
+        <div class="role">Publisher</div>
+        <h3>Pays to be delivered</h3>
+        <p>A site funds a delivery budget in KAS — exactly as it funds a CDN account today — and gets a manifest for its content.</p>
+        <div class="flow">— KAS →</div>
+      </div>
+      <div class="who">
+        <div class="role">Providers · the crowd</div>
+        <h3>Serve babels, earn</h3>
+        <p>Spare bandwidth and disk. They cache popular babels and serve them, earning per verified babel. Serve junk, earn nothing.</p>
+        <div class="flow">↑ babels ↑</div>
+      </div>
+      <div class="who">
+        <div class="role">Gatherer · the viewer</div>
+        <h3>Pulls, verifies, pays nothing</h3>
+        <p>Pulls babels, checks each against the manifest, and signs a receipt. That receipt is a provider's proof it earned — junk gets none.</p>
+        <div class="flow">✓ receipts ✓</div>
+      </div>
+    </div>
+    <p class="body" style="margin-top:18px">The viewer is the <strong>meter and the referee</strong>;
+      the publisher is the <strong>payer</strong>; the crowd is the <strong>earner</strong>. Cheating is
+      caught for free, because a bad babel never earns a receipt. It's a two-sided market where the money
+      only ever moves for bytes that provably arrived.</p>
+  </section>
+
+  <section id="why">
+    <div class="num">06 — WHY KASPA</div>
+    <h2>Paying the crowd as it works needs a chain that settles in real time.</h2>
+    <p class="sub">A delivery network makes thousands of tiny payments a second — one per babel, per
+      viewer, per provider. That's impossible if settling takes minutes and costs more than the payment.
+      It's why every decentralized-CDN attempt so far either doesn't really pay per use, or batches it and
+      leans on a speculative token — quietly putting a trusted middle back.</p>
+    <div class="callout">
+      <h3>Real-time decentralization isn't our slogan. It's Kaspa's own doctrine.</h3>
+      <p>Kaspa states its purpose as <em>real-time decentralization</em>: censorship-resistance and
+        permissionless settlement in real time, not eventually — on a fair-launched proof-of-work chain
+        with no premine. It confirms in about a second at up to ten blocks a second. Cascade is that
+        doctrine made physical: a network that pays its participants <em>as they serve, continuously.</em>
+        The money keeps pace with the bytes. That's not a clever use of a fast chain — it's the thing the
+        fast chain exists to do.</p>
+    </div>
+  </section>
+
+  <section id="sovereignty" class="sov">
+    <div class="num">07 — WHY DECENTRALIZATION MATTERS</div>
+    <h2>Infrastructure you own can't be taken from you.</h2>
+    <p>The word "decentralization" gets worn smooth by crypto marketing, so here is the plain version.
+      When the delivery layer of the internet is owned by a few companies, three things follow, whether
+      those companies mean well or not: <b>they can throttle or bill you at will, they can take you offline
+      with a phone call, and when they break, everyone breaks at once.</b> You are a tenant on someone
+      else's infrastructure, and tenancy can be revoked.</p>
+    <p><b>Cascade changes the ownership, not just the technology.</b> When the caches are everyone's
+      devices, no single company holds the switch. There is no trust-and-safety desk that can un-publish a
+      lawful site, no single outage that darkens a fifth of the web, no monopoly rent on moving bytes that
+      cost the crowd almost nothing to move. The infrastructure belongs to the people using it — which is
+      what the internet was supposed to be before it consolidated into a few landlords.</p>
+    <p>This is what "reclaiming the internet" actually means in practice — not a manifesto, a
+      <b>property change</b>. The heavy content we all depend on gets carried by a commons the crowd owns
+      and is paid to maintain, on money that no company or state issues or freezes. Sovereignty isn't a
+      feeling here; it's <b>whose hardware your bytes live on, and whose permission you need to be seen.</b></p>
+    <p class="pull" style="margin-top:26px; color:var(--azure-deep)">A commons the crowd owns and is paid
+      to keep. That is the whole idea.</p>
+  </section>
+
+  <section id="honest">
+    <div class="num">08 — HONEST AND TRUE</div>
+    <h2>What's real, what's hard, and what isn't built yet.</h2>
+    <p class="sub">A claim is only worth as much as its caveats. Here they are, plainly — because a
+      project that hides its hard parts isn't one you should trust with the internet's plumbing.</p>
+    <div class="honest">
+      <div class="row"><div class="h">Getting bytes between phones is hard</div><div class="b">Mobile carrier networks hide devices, so two phones can't just connect. This needs relays or hole-punching, and it's the single biggest engineering risk. Early on, PCs, routers and relays carry the network; phones start as viewers and Wi-Fi cache-holders, not the backbone.</div></div>
+      <div class="row"><div class="h">It won't beat Cloudflare on reliability</div><div class="b">A big CDN is fast, has contracts and legal accountability; a swarm is messier. Cascade competes on price, reach, and being unownable — not on being flatly more reliable, at least at first.</div></div>
+      <div class="row"><div class="h">Supply needs demand</div><div class="b">Nodes won't run for pennies with nobody buying. One real publisher delivering through it matters more than a thousand idle nodes. That, not the tech, is the hard bootstrap.</div></div>
+      <div class="row"><div class="h">Content it serves is public</div><div class="b">A swarm serving whatever it's handed inherits the abuse problems every CDN has. Content is addressed by hash and providers serve only catalogues they opted into — but this is real work, not a solved problem.</div></div>
+    </div>
+    <div class="status">
+      <b>What's actually built, today:</b> the swarm runs end to end and is <span class="ok">pinned by tests</span> —
+      a file reassembles byte-identical from several providers at once, each paid its share; a provider
+      serving corrupted bytes is caught by the manifest, paid nothing, and routed around; stopping partway
+      pays only for what arrived. It settles on the same Kaspa rail proven on testnet by its siblings.
+      <br><br>
+      <b>What's designed but not built:</b> the <em>publisher-pays</em> market above — today's code is the
+      simpler <em>viewer-pays</em> version. The browser loader, a real DHT to replace the central tracker,
+      and phone-network traversal are named next steps, not hidden gaps.
+    </div>
+    <div class="stack">
+      <a class="btn primary" href="https://github.com/kaspahttp402/cascade">
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+        Cascade on GitHub
+      </a>
+      <a class="btn" href="https://kaspahttp402.github.io/spigot/">spigot — one seller</a>
+      <a class="btn" href="https://kaspahttp402.github.io/flume/">flume — streaming</a>
+    </div>
+  </section>
+
+  <footer>
+    <b>Cascade</b> — a paid, self-verifying delivery network on Kaspa, built on the metered rail. The
+    heavy content of the internet, carried by a commons the crowd owns and is paid to keep. Part of the
+    suite: <a href="https://kaspahttp402.github.io/metered-protocol/">metered</a> ·
+    <a href="https://kaspahttp402.github.io/spigot/">spigot</a> ·
+    <a href="https://kaspahttp402.github.io/flume/">flume</a> ·
+    <a href="https://github.com/kaspahttp402/quorum">quorum</a> · Cascade. MIT-licensed. Testnet only —
+    every "not yet" above is stated on purpose.
+  </footer>
+</div>
+
+<script>
+(function(){
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  var cv=document.getElementById('flowcanvas'), ctx=cv.getContext('2d');
+  var W,H,dpr=Math.min(window.devicePixelRatio||1,2);
+  function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+  function size(){var r=cv.getBoundingClientRect();W=r.width;H=r.height;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);}
+  size(); window.addEventListener('resize',size);
+
+  var NODES=7, nodes=[], viewer, drops=[], babels=0, paid=0;
+  function seed(){ nodes=[]; for(var i=0;i<NODES;i++) nodes.push({x:60+Math.random()*70, y:24+(H-48)*(i/(NODES-1))}); viewer={x:W-70,y:H/2}; }
+  seed(); window.addEventListener('resize',seed);
+  document.getElementById('tN').textContent=String(NODES);
+
+  function emit(){ var n=nodes[Math.floor(Math.random()*nodes.length)]; drops.push({sx:n.x,sy:n.y,x:n.x,y:n.y,t:0,paid:false}); }
+  var acc=0, last=performance.now();
+  function frame(dt){
+    ctx.clearRect(0,0,W,H);
+    var az=css('--azure')||'#1d5fd4', cy=css('--cyan')||'#0a95ab', gold=css('--gold')||'#b0751a',
+        line=css('--line')||'#dbe1ee', surf=css('--surface-2')||'#f4f7fb';
+    ctx.strokeStyle=line; ctx.lineWidth=1;
+    nodes.forEach(function(n){ctx.beginPath();ctx.moveTo(n.x,n.y);ctx.lineTo(viewer.x,viewer.y);ctx.stroke();});
+    nodes.forEach(function(n){ ctx.fillStyle=surf; ctx.strokeStyle=az; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(n.x,n.y,9,0,7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle=az; ctx.beginPath(); ctx.arc(n.x,n.y,3.2,0,7); ctx.fill(); });
+    // viewer (a screen)
+    ctx.fillStyle=surf; ctx.strokeStyle=cy; ctx.lineWidth=2.4;
+    ctx.beginPath(); ctx.roundRect(viewer.x-20,viewer.y-15,40,30,6); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=cy; ctx.fillRect(viewer.x-13,viewer.y-8,26,16);
+    for(var i=drops.length-1;i>=0;i--){ var d=drops[i]; d.t+=dt*(reduce?0:1.5); var e=Math.min(d.t,1);
+      d.x=d.sx+(viewer.x-d.sx)*e; d.y=d.sy+(viewer.y-d.sy)*e;
+      ctx.fillStyle=az; ctx.beginPath(); ctx.roundRect(d.x-4,d.y-3,8,6,2); ctx.fill();
+      if(e>=1 && !d.paid){ d.paid=true; babels++; paid+=0.00002;
+        document.getElementById('tB').textContent=babels.toLocaleString();
+        document.getElementById('tP').textContent=paid.toFixed(5)+' KAS';
+        d.flash=0; }
+      if(d.paid){ d.flash+=dt*1.8; var fe=Math.min(d.flash,1);
+        var fx=viewer.x+(d.sx-viewer.x)*fe, fy=viewer.y+(d.sy-viewer.y)*fe;
+        ctx.fillStyle=gold; ctx.globalAlpha=1-fe; ctx.beginPath(); ctx.arc(fx,fy,4,0,7); ctx.fill(); ctx.globalAlpha=1;
+        if(fe>=1) drops.splice(i,1); } }
+  }
+  function loop(now){ var dt=Math.min((now-last)/1000,0.05); last=now; acc+=dt;
+    if(!reduce && acc>0.42){ acc=0; emit(); } frame(dt); requestAnimationFrame(loop); }
+  if(reduce){ for(var k=0;k<4;k++){emit();drops[k].t=0.6;} babels=2048; paid=0.04096;
+    document.getElementById('tB').textContent='2,048'; document.getElementById('tP').textContent='0.04096 KAS';
+    frame(0);
+  } else requestAnimationFrame(loop);
+})();
+</script>
