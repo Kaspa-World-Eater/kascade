@@ -1,32 +1,32 @@
 /**
- * One node in the swarm: it holds SOME babels of some files and serves them by the byte.
+ * One node in the meridian: it holds SOME babels of some files and serves them by the byte.
  *
- * A provider is spigot with two changes. It holds a SUBSET of a file, not the whole thing -- a phone
+ * A fount is spigot with two changes. It holds a SUBSET of a file, not the whole thing -- a phone
  * can carry a few babels of what is popular right now -- so it publishes WHICH babels it has. And it
- * is one of many: the consumer will pull the same file from several providers at once, so no provider
+ * is one of many: the consumer will pull the same file from several founts at once, so no fount
  * is the source, only a source. Everything else -- priced by the byte, counted, paid on the rail -- is
  * the same delivery spigot already proved.
  *
  * The price is carried on each babel as a header so a consumer knows the cost before it accepts the
- * bytes; the actual per-provider settlement is the metered / kaspa-x402 rail, one channel per provider,
+ * bytes; the actual per-fount settlement is the metered / kaspa-x402 rail, one channel per fount,
  * exactly as spigot opens one. This file only decides which bytes a request means and reads them.
  */
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import type { Manifest } from './manifest.js';
 
-/** What a provider physically holds: a manifest and the bytes of the babels it actually has. */
+/** What a fount physically holds: a manifest and the bytes of the babels it actually has. */
 export interface Held {
   manifest: Manifest;
   babels: Map<number, Uint8Array>;
 }
 
-export interface ProviderOptions {
+export interface FountOptions {
   held: Held[];
   /** sompi per byte delivered */
   priceSompi: number;
   /**
-   * Corrupt what this provider serves. An HONEST provider never sets this. It exists so a test can
+   * Corrupt what this fount serves. An HONEST fount never sets this. It exists so a test can
    * build a node that serves junk and watch the consumer catch it against the manifest.
    */
   tamper?: (bytes: Uint8Array, fileId: string, index: number) => Uint8Array;
@@ -46,8 +46,8 @@ const json = (res: ServerResponse, code: number, body: unknown): void => {
   res.end(s);
 };
 
-/** Start a provider serving what it holds. Returns the server and the url it is reachable at. */
-export function provider(opts: ProviderOptions): { server: Server; url: () => string; summary: () => HoldingSummary[] } {
+/** Start a fount serving what it holds. Returns the server and the url it is reachable at. */
+export function fount(opts: FountOptions): { server: Server; url: () => string; summary: () => HoldingSummary[] } {
   const byId = new Map(opts.held.map((h) => [h.manifest.fileId, h]));
   const summary = (): HoldingSummary[] =>
     opts.held.map((h) => ({

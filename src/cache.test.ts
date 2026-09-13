@@ -1,5 +1,5 @@
 /**
- * A spring holds only what it's told to, and no more, pinned FIRST (test-driven):
+ * A fount holds only what it's told to, and no more, pinned FIRST (test-driven):
  *   - it caches babels up to a byte capacity the operator sets, and never past it;
  *   - over capacity, it evicts the LEAST-RECENTLY-USED cached babel to make room;
  *   - a PINNED babel (one a publisher is paying to keep available) is never evicted, even under
@@ -69,7 +69,7 @@ test('a babel larger than the whole capacity is refused outright', () => {
   assert.throws(() => c.put('f', 0, bytes(1500), { pinned: false }), OverCapacity);
 });
 
-test('holdings() lists what the spring holds, for announcing to the current', () => {
+test('holdings() lists what the fount holds, for announcing to the Meridian', () => {
   const c = new BabelCache(1000);
   c.put('a', 0, bytes(100), { pinned: true });
   c.put('a', 3, bytes(100), { pinned: false });

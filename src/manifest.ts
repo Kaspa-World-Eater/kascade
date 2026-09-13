@@ -8,7 +8,7 @@
  * and no one to trust. A node cannot serve junk and be believed, because the consumer checks every
  * babel against a name it knew before it asked. (This is exactly how BitTorrent verifies pieces.)
  *
- * So a delivery swarm does NOT need [[quorum]]'s agreement-of-many, which exists for the harder case
+ * So a delivery meridian does NOT need [[quorum]]'s agreement-of-many, which exists for the harder case
  * where the correct answer is unknown in advance. Here the answer is known up front: the manifest is
  * the referee. quorum's bond and slash still matter -- for punishing a node that repeatedly serves
  * junk or lies about what it holds -- but the per-babel check is just a hash.

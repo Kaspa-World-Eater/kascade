@@ -1,10 +1,10 @@
 /**
  * Discovery: who holds which babels of a file. The one small piece of shared state.
  *
- * A consumer cannot pull from the swarm until it knows who is in it. The tracker answers exactly one
+ * A consumer cannot pull from the meridian until it knows who is in it. The tracker answers exactly one
  * question -- "who has file X, and which babels?" -- and holds nothing else: no content, no money, no
  * account. It is the least trusted thing in the system, because a lying tracker can only send you to a
- * provider whose babels you will verify against the manifest anyway; the worst it can do is waste a
+ * fount whose babels you will verify against the manifest anyway; the worst it can do is waste a
  * request, never corrupt a file.
  *
  * This is a plain central tracker, which is the honest v1: it is simple, and it is exactly what
@@ -69,11 +69,11 @@ export function trackerServer(tracker = new Tracker()): { server: Server; url: (
   return { server, url, tracker };
 }
 
-/** A provider tells the tracker what it holds. */
-export async function announceTo(trackerUrl: string, fileId: string, providerUrl: string, indices: number[]): Promise<void> {
+/** A fount tells the tracker what it holds. */
+export async function announceTo(trackerUrl: string, fileId: string, fountUrl: string, indices: number[]): Promise<void> {
   await fetch(`${trackerUrl}/cascade/announce`, {
     method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ fileId, url: providerUrl, indices }),
+    body: JSON.stringify({ fileId, url: fountUrl, indices }),
   });
 }
 

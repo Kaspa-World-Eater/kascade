@@ -1,8 +1,8 @@
 /**
  * What cascade promises, pinned:
- *   - a file reassembles BYTE-IDENTICAL from several providers pulled at once;
- *   - each provider is paid for exactly the babels IT served, and the parts sum to the whole price;
- *   - a provider that serves JUNK is caught against the manifest, paid nothing for it, and routed
+ *   - a file reassembles BYTE-IDENTICAL from several founts pulled at once;
+ *   - each fount is paid for exactly the babels IT served, and the parts sum to the whole price;
+ *   - a fount that serves JUNK is caught against the manifest, paid nothing for it, and routed
  *     around -- the file still completes;
  *   - if no honest holder has a babel, the file is honestly INCOMPLETE, never corrupted;
  *   - stopping partway pays only for the babels that arrived.
@@ -11,7 +11,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { Server } from 'node:http';
 import { buildManifest, verifyBabel, manifestIsSound, type Manifest } from './manifest.js';
-import { provider, type Held } from './provider.js';
+import { fount, type Held } from './fount.js';
 import { trackerServer, announceTo, discover, type Holder } from './tracker.js';
 import { fetchFile } from './consumer.js';
 
@@ -39,14 +39,14 @@ test('a manifest is content-addressed: it is sound, and a tampered babel fails t
   assert.equal(verifyBabel(m, 0, tampered), false, 'one flipped bit is caught');
 });
 
-test('THE SWARM: a file reassembles byte-for-byte from three providers, each paid for its share', async () => {
+test('THE MERIDIAN: a file reassembles byte-for-byte from three founts, each paid for its share', async () => {
   const bytes = file(500_000); // 8 babels at 64 KB
   const m = buildManifest('movie.bin', bytes, 64 * 1024);
   const all = cut(bytes, m);
-  // three providers, overlapping subsets whose union is every babel.
+  // three founts, overlapping subsets whose union is every babel.
   const subsets = [[0, 1, 2, 3, 4], [3, 4, 5, 6], [0, 6, 7]];
   const held = (idx: number[]): Held[] => [{ manifest: m, babels: new Map(idx.map((i) => [i, all.get(i) as Uint8Array])) }];
-  const provs = subsets.map((idx) => provider({ held: held(idx), priceSompi: PRICE }));
+  const provs = subsets.map((idx) => fount({ held: held(idx), priceSompi: PRICE }));
   const { server: trk, url: trkUrl, tracker } = trackerServer();
   await Promise.all([...provs.map((p) => listen(p.server)), listen(trk)]);
   try {
@@ -59,24 +59,24 @@ test('THE SWARM: a file reassembles byte-for-byte from three providers, each pai
     assert.equal(receipt.complete, true);
     assert.equal(receipt.babelsGot, 8);
     assert.equal(receipt.totalSompi, 500_000 * PRICE, 'the whole price, once');
-    // the parts sum to the whole, and more than one provider actually earned.
-    const earners = Object.keys(receipt.perProvider);
-    assert.ok(earners.length >= 2, `several providers served, got ${earners.length}`);
-    const summed = Object.values(receipt.perProvider).reduce((n, t) => n + t.sompi, 0);
-    assert.equal(summed, receipt.totalSompi, 'per-provider pay sums to the total');
+    // the parts sum to the whole, and more than one fount actually earned.
+    const earners = Object.keys(receipt.perFount);
+    assert.ok(earners.length >= 2, `several founts served, got ${earners.length}`);
+    const summed = Object.values(receipt.perFount).reduce((n, t) => n + t.sompi, 0);
+    assert.equal(summed, receipt.totalSompi, 'per-fount pay sums to the total');
     assert.equal(receipt.faults.length, 0);
   } finally {
     await Promise.all([...provs.map((p) => close(p.server)), close(trk)]);
   }
 });
 
-test('a JUNK provider is caught and routed around; the file still completes and it earns nothing for junk', async () => {
+test('a JUNK fount is caught and routed around; the file still completes and it earns nothing for junk', async () => {
   const bytes = file(300_000); // 5 babels
   const m = buildManifest('data.bin', bytes, 64 * 1024);
   const all = cut(bytes, m);
-  const honest = provider({ held: [{ manifest: m, babels: new Map(m.babels.map((c) => [c.index, all.get(c.index) as Uint8Array])) }], priceSompi: PRICE });
+  const honest = fount({ held: [{ manifest: m, babels: new Map(m.babels.map((c) => [c.index, all.get(c.index) as Uint8Array])) }], priceSompi: PRICE });
   // a liar that holds every babel too, but flips a byte in whatever it serves.
-  const liar = provider({
+  const liar = fount({
     held: [{ manifest: m, babels: new Map(m.babels.map((c) => [c.index, all.get(c.index) as Uint8Array])) }],
     priceSompi: PRICE,
     tamper: (b) => { const t = Uint8Array.from(b); t[0] = (t[0] ?? 0) ^ 0x01; return t; },
@@ -92,8 +92,8 @@ test('a JUNK provider is caught and routed around; the file still completes and 
     assert.equal(receipt.complete, true);
     assert.ok(receipt.faults.length >= 1, 'the liar was caught at least once');
     assert.equal(receipt.faults.every((f) => f.url === liar.url()), true, 'only the liar is faulted');
-    assert.equal(receipt.perProvider[liar.url()], undefined, 'the liar earned nothing -- junk is never billed');
-    assert.equal(receipt.perProvider[honest.url()]?.sompi, 300_000 * PRICE, 'the honest provider earned it all');
+    assert.equal(receipt.perFount[liar.url()], undefined, 'the liar earned nothing -- junk is never billed');
+    assert.equal(receipt.perFount[honest.url()]?.sompi, 300_000 * PRICE, 'the honest fount earned it all');
   } finally {
     await Promise.all([close(honest.server), close(liar.server)]);
   }
@@ -103,8 +103,8 @@ test('if no honest holder has a babel, the file is honestly incomplete, not corr
   const bytes = file(200_000); // 4 babels
   const m = buildManifest('data.bin', bytes, 64 * 1024);
   const all = cut(bytes, m);
-  // one provider that holds only babels 0 and 1 -- 2 and 3 exist nowhere.
-  const p = provider({ held: [{ manifest: m, babels: new Map([[0, all.get(0) as Uint8Array], [1, all.get(1) as Uint8Array]]) }], priceSompi: PRICE });
+  // one fount that holds only babels 0 and 1 -- 2 and 3 exist nowhere.
+  const p = fount({ held: [{ manifest: m, babels: new Map([[0, all.get(0) as Uint8Array], [1, all.get(1) as Uint8Array]]) }], priceSompi: PRICE });
   await listen(p.server);
   try {
     const holders: Holder[] = [{ url: p.url(), indices: [0, 1] }];
@@ -121,7 +121,7 @@ test('stopping partway pays only for the babels that arrived', async () => {
   const bytes = file(640_000); // 10 babels
   const m = buildManifest('big.bin', bytes, 64 * 1024);
   const all = cut(bytes, m);
-  const p = provider({ held: [{ manifest: m, babels: new Map(m.babels.map((c) => [c.index, all.get(c.index) as Uint8Array])) }], priceSompi: PRICE });
+  const p = fount({ held: [{ manifest: m, babels: new Map(m.babels.map((c) => [c.index, all.get(c.index) as Uint8Array])) }], priceSompi: PRICE });
   await listen(p.server);
   try {
     let got = 0;

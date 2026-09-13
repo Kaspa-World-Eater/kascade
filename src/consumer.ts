@@ -1,32 +1,32 @@
 /**
- * The buyer's side: reassemble a file from many providers at once, paying each for what it served.
+ * The buyer's side: reassemble a file from many founts at once, paying each for what it served.
  *
- * This is the swarm. For every babel the manifest names, the consumer picks a provider that holds it,
+ * This is the meridian. For every babel the manifest names, the consumer picks a fount that holds it,
  * pulls the bytes, and CHECKS THEM against the manifest before believing or paying anything. A babel
- * that fails the check is not paid for and the provider that served it is recorded as a fault (the
+ * that fails the check is not paid for and the fount that served it is recorded as a fault (the
  * thing a bond is slashed for); the consumer routes around it to another holder and the file still
- * completes. Payment is accrued per provider -- each is owed the bytes it actually delivered times the
- * price -- which is what a rail voucher per provider will carry.
+ * completes. Payment is accrued per fount -- each is owed the bytes it actually delivered times the
+ * price -- which is what a rail voucher per fount will carry.
  *
  * TWO PROPERTIES FALL OUT OF THE MANIFEST, for free:
  *   - You cannot be made to pay for junk: a wrong babel never verifies, so it is never billed.
  *   - You cannot be overbilled: the amount is the babel's size FROM THE MANIFEST, which the consumer
- *     knew before it asked -- a provider cannot inflate it.
+ *     knew before it asked -- a fount cannot inflate it.
  * Stopping partway is honest for the same reason spigot's is: you have paid for the babels that
  * arrived and verified, and nothing else.
  */
 import { verifyBabel, type Manifest } from './manifest.js';
 import type { Holder } from './tracker.js';
 
-export interface ProviderTally { babels: number; bytes: number; sompi: number }
+export interface FountTally { babels: number; bytes: number; sompi: number }
 
 export interface Receipt {
-  perProvider: Record<string, ProviderTally>;
+  perFount: Record<string, FountTally>;
   totalSompi: number;
   babelsGot: number;
   bytesGot: number;
   complete: boolean;
-  /** a provider served a babel that failed the manifest -- the evidence a bond is slashed on */
+  /** a fount served a babel that failed the manifest -- the evidence a bond is slashed on */
   faults: { url: string; index: number }[];
 }
 
@@ -39,7 +39,7 @@ export interface FetchOptions {
   stop?: () => boolean;
 }
 
-/** For each babel index, the providers that claim to hold it. */
+/** For each babel index, the founts that claim to hold it. */
 function holdersByIndex(holders: Holder[]): Map<number, string[]> {
   const m = new Map<number, string[]>();
   for (const h of holders) for (const i of h.indices) m.set(i, [...(m.get(i) ?? []), h.url]);
@@ -66,25 +66,25 @@ async function getOneBabel(
   return null;
 }
 
-function credit(tallies: Record<string, ProviderTally>, url: string, bytes: number, priceSompi: number): number {
+function credit(tallies: Record<string, FountTally>, url: string, bytes: number, priceSompi: number): number {
   const t = tallies[url] ?? { babels: 0, bytes: 0, sompi: 0 };
   const sompi = bytes * priceSompi;
   tallies[url] = { babels: t.babels + 1, bytes: t.bytes + bytes, sompi: t.sompi + sompi };
   return sompi;
 }
 
-/** Pull the whole file from the swarm, in parallel, paying each provider for what it delivered. */
+/** Pull the whole file from the meridian, in parallel, paying each fount for what it delivered. */
 export async function fetchFile(opts: FetchOptions): Promise<{ bytes: Uint8Array; receipt: Receipt }> {
   const { manifest } = opts;
   const candidates = holdersByIndex(opts.holders);
   const got = new Map<number, Uint8Array>();
-  const receipt: Receipt = { perProvider: {}, totalSompi: 0, babelsGot: 0, bytesGot: 0, complete: false, faults: [] };
+  const receipt: Receipt = { perFount: {}, totalSompi: 0, babelsGot: 0, bytesGot: 0, complete: false, faults: [] };
   const queue = manifest.babels.map((c) => c.index);
   let cursor = 0;
   const usage = new Map<string, number>();
 
   const pick = (urls: string[]): string[] =>
-    [...urls].sort((a, b) => (usage.get(a) ?? 0) - (usage.get(b) ?? 0)); // least-loaded provider first
+    [...urls].sort((a, b) => (usage.get(a) ?? 0) - (usage.get(b) ?? 0)); // least-loaded fount first
 
   async function worker(): Promise<void> {
     while (cursor < queue.length) {
@@ -95,7 +95,7 @@ export async function fetchFile(opts: FetchOptions): Promise<{ bytes: Uint8Array
       const babel = await getOneBabel(index, urls, manifest, receipt.faults);
       if (!babel) continue; // no holder could supply a valid copy; file stays incomplete
       got.set(index, babel.bytes);
-      receipt.totalSompi += credit(receipt.perProvider, babel.from, babel.bytes.length, opts.priceSompi);
+      receipt.totalSompi += credit(receipt.perFount, babel.from, babel.bytes.length, opts.priceSompi);
       receipt.babelsGot += 1;
       receipt.bytesGot += babel.bytes.length;
       opts.onBabel?.(index, babel.bytes, babel.from);
