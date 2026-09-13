@@ -52,6 +52,22 @@ npm install
 npm test          # 10 tests, incl. "a file reassembles byte-for-byte from three founts at once"
 ```
 
+## See it work
+
+```bash
+npm install
+npm run cascade demo    # a whole Meridian, live, in one process -- nothing mocked
+```
+
+`demo` starts four real HTTP founts (one of them lying), splits a real file across them, and gathers
+it back through the same fount/tracker/consumer/settlement code a deployed node would run. You watch
+the liar get **tried first, rejected by the manifest, and routed around**; the file come back
+**byte-identical**; and each fount paid only for the babels it actually served -- the liar earning
+nothing and getting slashed. It is pinned by a test, so it cannot quietly break.
+
+The real commands are there too: `cascade tracker`, `cascade fount <dir> --tracker <url>`, and
+`cascade get <trackerUrl> <fileId>` run founts and gatherers as separate processes.
+
 ## Status
 
 The Meridian runs end to end in-process: a file reassembles byte-identical from three founts pulled at
