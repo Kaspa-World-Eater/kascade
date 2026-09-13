@@ -9,6 +9,8 @@ seller into a **network**. Which is to say: it's BitTorrent with the one thing B
 a way to *pay the seeders*, per piece, as the bytes arrive. The bytes move peer-to-peer over the
 ordinary internet; only the money touches the chain, and it's tiny.
 
+**→ [Read what Cascade is, in one page](https://kaspahttp402.github.io/cascade/)** — what it is, what it replaces, why Kaspa, and why it matters for sovereignty.
+
 ## Why Kaspa — not as a slogan, as the reason it can exist
 
 Kaspa's own stated doctrine is **real-time decentralization**: censorship-resistance, permissionless
