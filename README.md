@@ -65,6 +65,11 @@ the liar get **tried first, rejected by the manifest, and routed around**; the f
 **byte-identical**; and each fount paid only for the babels it actually served -- the liar earning
 nothing and getting slashed. It is pinned by a test, so it cannot quietly break.
 
+**The money is proven on chain, too.** `npx tsx tools/prove-live.ts` runs it live on Kaspa
+testnet-10: a fount starts at 0 KAS, delivers a real file, and **claims real testnet KAS** for exactly
+the babels it served (genesis `1216fcf1…`, claim `8af4c616…`, +0.055 KAS to the fount). Same
+kaspa-x402 rail spigot and flume settle on; multi-fount is this once per fount.
+
 The real commands are there too: `cascade tracker`, `cascade fount <dir> --tracker <url>`, and
 `cascade get <trackerUrl> <fileId>` run founts and gatherers as separate processes.
 
