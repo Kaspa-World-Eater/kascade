@@ -143,7 +143,10 @@ over the receipt handshake paying **zero**, and the fount claims what it earned 
 **The honest limit, named:** a receipt proves the viewer *says* it received a parcel — not that the
 viewer is a real, distinct person. A fount colluding with a fake viewer can mint receipts for a budget.
 Signatures and covenants cannot separate a real consumer from a sock puppet; that is a sybil/reputation
-problem, still open. What is closed: no pay for junk, no double-count of a parcel, and the viewer pays nothing.
+problem, still open. What is closed: no pay for junk, no double-count of a parcel, and the viewer pays
+nothing. Why it can't be solved by crypto, how the field (Saturn, Meson) actually handles it, and the
+two honest modes we recommend — publisher-authorized viewers, and stake-and-detect for the open mesh —
+are written up in **[docs/publisher-pays-collusion.md](docs/publisher-pays-collusion.md)**.
 
 ## Finding founts without a tracker (the DHT)
 
