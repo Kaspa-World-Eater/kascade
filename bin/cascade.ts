@@ -16,7 +16,7 @@ import { runDemo, type DemoResult } from '../src/demo.js';
 import { stock } from '../src/stock.js';
 import { channels as openChannels } from '../src/channel.js';
 import type { Network } from 'metered-protocol/rail';
-import { paidFountOptions, openChannelWith, getPaid, claimStored } from '../src/paidcli.js';
+import { paidFountOptions, openChannelWith, getPaid, claimStored, ensureChannels, refundChannel } from '../src/paidcli.js';
 import { seed } from '../src/seed.js';
 
 const argv = process.argv.slice(2);
@@ -88,6 +88,11 @@ async function get(): Promise<void> {
   const [trackerUrl, fileId] = positional;
   if (!trackerUrl || !fileId) { console.error('usage: cascade get <trackerUrl> <fileId> [--out FILE] [--pay]'); process.exit(1); }
   if (has('pay')) {
+    if (has('auto')) {
+      const urls = (await discover(trackerUrl, fileId)).map((h) => h.url);
+      const opened = await ensureChannels(urls, NET, BigInt(Math.round(Number(flag('escrow', '0.5')) * 1e8)), BigInt(num('window', 3600)));
+      if (opened) console.log(`\n  opened ${opened} channel(s) for this gather`);
+    }
     const res = await getPaid(trackerUrl, fileId, NET, num('price', 2));
     if (res.complete) writeFileSync(flag('out', 'download.bin'), res.bytes);
     const paid = Object.values(res.perFount).reduce((n, p) => n + p.sompi, 0);
@@ -131,6 +136,15 @@ async function claimCmd(): Promise<void> {
   process.exit(0);
 }
 
+async function refundCmd(): Promise<void> {
+  const cov = positional[0];
+  if (!cov) { console.error('usage: cascade refund <covenantId>'); process.exit(1); }
+  console.log(`\n  refunding channel ${cov.slice(0, 16)}… once its timeout passes (this waits)`);
+  const out = await refundChannel(cov);
+  console.log(`  ${out.txid}\n  ${kas(out.refunded)} KAS back to the gatherer\n`);
+  process.exit(0);
+}
+
 async function publish(): Promise<void> {
   const filePath = positional[0];
   const to = flag('to', '').split(',').map((x) => x.trim()).filter(Boolean);
@@ -144,7 +158,7 @@ async function publish(): Promise<void> {
   process.exit(0);
 }
 
-const COMMANDS: Record<string, () => Promise<void>> = { demo, tracker, fount: serveFount, get, publish, channel, channels: channelsList, claim: claimCmd };
+const COMMANDS: Record<string, () => Promise<void>> = { demo, tracker, fount: serveFount, get, publish, channel, channels: channelsList, claim: claimCmd, refund: refundCmd };
 const run = COMMANDS[command ?? ''];
-if (!run) { console.error('cascade: demo | tracker | fount [--paid] [--accept MB] | publish <file> --to <urls> | get [--pay] | channel open | channels | claim'); process.exit(1); }
+if (!run) { console.error('cascade: demo | tracker | fount [--paid] [--accept MB] | publish <file> --to <urls> | get [--pay] | channel open | channels | claim | refund'); process.exit(1); }
 run().catch((e: unknown) => { console.error(`\n  ${e instanceof Error ? e.message : String(e)}\n`); process.exit(1); });

@@ -11,7 +11,7 @@ import { join } from 'node:path';
 import type { Voucher } from 'metered-protocol';
 import { proposalFor, type Network } from 'metered-protocol/rail';
 import { identity } from './keys.js';
-import { open, claim, recall, channelWith, sellerChannels } from './channel.js';
+import { open, claim, recall, channelWith, sellerChannels, refund } from './channel.js';
 import { stock, type StockFile } from './stock.js';
 import type { FountOptions } from './fount.js';
 import type { Manifest } from './manifest.js';
@@ -76,6 +76,21 @@ export async function getPaid(trackerUrl: string, fileId: string, network: Netwo
     if (rec) channelByFount[h.url] = { network: `kaspa:${network}`, covenantId: rec.channel.covenantId };
   }
   return gatherPaid({ manifest, holders, channelByFount, buyerSk: me.secretKeyHex, priceSompi });
+}
+
+/** GATHERER: open a channel with any fount in this list it does not already have one with. */
+export async function ensureChannels(fountUrls: string[], network: Network, escrowSompi: bigint, windowDaa: bigint): Promise<number> {
+  let opened = 0;
+  for (const url of fountUrls) {
+    const { payoutPubkey } = await fetchJson<{ payoutPubkey: string | null }>(`${url}/cascade/identity`);
+    if (payoutPubkey && !channelWith(payoutPubkey)) { await openChannelWith(url, network, escrowSompi, windowDaa); opened += 1; }
+  }
+  return opened;
+}
+
+/** GATHERER: reclaim the unspent remainder of a channel after its timeout has passed (this waits). */
+export async function refundChannel(covenantId: string): Promise<{ txid: string; refunded: bigint }> {
+  return refund(identity('gatherer').secretKeyHex, covenantId);
 }
 
 /** FOUNT: claim what the stored voucher for a channel covers. */
