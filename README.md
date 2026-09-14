@@ -135,6 +135,11 @@ viewer. A fount that serves junk earns no receipt; a claim below the KIP-9 dust 
 exceeds the budget. Proven end to end in-process (`src/receiptgather.test.ts`): three real founts, one
 lying, a viewer that pays **zero**, the liar unpaid, the file byte-identical.
 
+**Proven on chain.** `npx tsx tools/prove-live-publisher.ts` runs it live on testnet-10: a publisher
+funds a 0.5 KAS budget, an **unfunded** viewer (an ephemeral key, no wallet) gathers the whole file
+over the receipt handshake paying **zero**, and the fount claims what it earned from the publisher —
+`b6a7768380d217d4b4094c2a83dd14b43e1d46fa4807067350f45de94156745c` (0.175 KAS, verifiable on the TN10 API).
+
 **The honest limit, named:** a receipt proves the viewer *says* it received a parcel — not that the
 viewer is a real, distinct person. A fount colluding with a fake viewer can mint receipts for a budget.
 Signatures and covenants cannot separate a real consumer from a sock puppet; that is a sybil/reputation
