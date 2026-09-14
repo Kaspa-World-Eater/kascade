@@ -14,8 +14,9 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import type { Voucher, ChannelRef, ChannelProposal } from 'metered-protocol';
-import type { Manifest } from './manifest.js';
+import { verifyParcel, type Manifest } from './manifest.js';
 import { Creditline } from './creditline.js';
+import { ParcelCache } from './cache.js';
 
 /** What a fount physically holds: a manifest and the bytes of the parcels it actually has. */
 export interface Held {
@@ -48,6 +49,9 @@ export interface FountOptions {
   /** Called whenever a voucher is accepted -- how a long-running fount persists what it can later
    *  claim. The latest (highest) voucher per channel is the one to keep. */
   onVoucher?: (covenantId: string, voucher: Voucher) => void;
+  /** Opt in to accepting content PUSHED to this fount (a publisher seeding it), up to this many
+   *  bytes. Absent, /cascade/store is off and the fount serves only what it was given. */
+  acceptBytes?: number;
 }
 
 export interface CreditContext {
@@ -101,11 +105,22 @@ const readBody = (req: IncomingMessage): Promise<unknown> =>
 /** Start a fount serving what it holds. Returns the server and the url it is reachable at. */
 export function fount(opts: FountOptions): { server: Server; url: () => string; summary: () => HoldingSummary[] } {
   const byId = new Map(opts.held.map((h) => [h.manifest.fileId, h]));
-  const summary = (): HoldingSummary[] =>
-    opts.held.map((h) => ({
+  const store = opts.acceptBytes ? new ParcelCache(opts.acceptBytes) : null;
+  const pushed = new Map<string, Manifest>(); // manifests of files pushed to this fount
+  const manifestOf = (fileId: string): Manifest | undefined => byId.get(fileId)?.manifest ?? pushed.get(fileId);
+  const parcelOf = (fileId: string, index: number): Uint8Array | undefined => byId.get(fileId)?.parcels.get(index) ?? store?.get(fileId, index);
+
+  const summary = (): HoldingSummary[] => {
+    const rows: HoldingSummary[] = opts.held.map((h) => ({
       fileId: h.manifest.fileId, name: h.manifest.name, size: h.manifest.size,
       parcelSize: h.manifest.parcelSize, indices: [...h.parcels.keys()].sort((a, b) => a - b),
     }));
+    for (const [fileId, m] of pushed) {
+      const indices = (store?.holdings() ?? []).filter((x) => x.fileId === fileId).map((x) => x.index).sort((a, b) => a - b);
+      rows.push({ fileId, name: m.name, size: m.size, parcelSize: m.parcelSize, indices });
+    }
+    return rows;
+  };
 
   const lines = new Map<string, Creditline>();
   const proposals = new Map<string, CreditContext>();
@@ -134,17 +149,29 @@ export function fount(opts: FountOptions): { server: Server; url: () => string; 
       const g = creditGate(opts, paid, resolveCredit, lines, u.searchParams.get('channel') ?? '', typeof vh === 'string' ? vh : undefined);
       return json(res, g.ok ? 200 : 402, g.ok ? { ok: true } : { error: g.error });
     }
-    const held = byId.get(u.searchParams.get('file') ?? '');
-    if (!held) return json(res, 404, { error: 'file not held here' });
-    if (u.pathname === '/cascade/manifest') return json(res, 200, held.manifest);
+    if (u.pathname === '/cascade/store') {
+      if (!store) return json(res, 404, { error: 'this fount does not accept pushed content' });
+      void readBody(req).then((body) => {
+        const { manifest, index, bytesB64 } = body as { manifest: Manifest; index: number; bytesB64: string };
+        const bytes = new Uint8Array(Buffer.from(bytesB64, 'base64'));
+        if (!verifyParcel(manifest, index, bytes)) return json(res, 422, { error: 'parcel does not match the manifest' });
+        store.put(manifest.fileId, index, bytes, { pinned: false });
+        pushed.set(manifest.fileId, manifest);
+        json(res, 200, { ok: true });
+      }).catch(() => json(res, 400, { error: 'bad store request' }));
+      return;
+    }
+    const manifest = manifestOf(u.searchParams.get('file') ?? '');
+    if (!manifest) return json(res, 404, { error: 'file not held here' });
+    if (u.pathname === '/cascade/manifest') return json(res, 200, manifest);
     if (u.pathname === '/cascade/parcel') {
       const index = Number(u.searchParams.get('i'));
-      const bytes = held.parcels.get(index);
+      const bytes = parcelOf(manifest.fileId, index);
       if (!bytes) return json(res, 404, { error: `parcel ${index} not held here` });
       const vh = req.headers['x-voucher'];
       const gate = creditGate(opts, paid, resolveCredit, lines, u.searchParams.get('channel') ?? '', typeof vh === 'string' ? vh : undefined);
       if (!gate.ok) return json(res, 402, { error: gate.error });
-      const out = opts.tamper ? opts.tamper(bytes, held.manifest.fileId, index) : bytes;
+      const out = opts.tamper ? opts.tamper(bytes, manifest.fileId, index) : bytes;
       res.writeHead(200, {
         'content-type': 'application/octet-stream',
         'content-length': out.length,

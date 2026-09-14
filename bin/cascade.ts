@@ -17,6 +17,7 @@ import { stock } from '../src/stock.js';
 import { channels as openChannels } from '../src/channel.js';
 import type { Network } from 'metered-protocol/rail';
 import { paidFountOptions, openChannelWith, getPaid, claimStored } from '../src/paidcli.js';
+import { seed } from '../src/seed.js';
 
 const argv = process.argv.slice(2);
 const [command, ...rest] = argv;
@@ -70,9 +71,10 @@ async function serveFount(): Promise<void> {
   const files = names.map((name) => ({ name, bytes: new Uint8Array(readFileSync(join(root, name))) }));
   const capBytes = num('cap', 1024) * 1024 * 1024; // --cap in MB, default 1 GB; the fount never holds more
   const price = num('price', 2);
-  const options: FountOptions = has('paid')
+  const base: FountOptions = has('paid')
     ? paidFountOptions(files, NET, price, capBytes)
     : { held: stock(files, capBytes, num('parcel', 64 * 1024)).held, priceSompi: price };
+  const options: FountOptions = has('accept') ? { ...base, acceptBytes: num('accept', 512) * 1024 * 1024 } : base;
   const f = fount(options);
   await new Promise<void>((r) => f.server.listen(num('port', 0), '127.0.0.1', r));
   const url = `http://127.0.0.1:${port(f.server)}`;
@@ -129,7 +131,20 @@ async function claimCmd(): Promise<void> {
   process.exit(0);
 }
 
-const COMMANDS: Record<string, () => Promise<void>> = { demo, tracker, fount: serveFount, get, channel, channels: channelsList, claim: claimCmd };
+async function publish(): Promise<void> {
+  const filePath = positional[0];
+  const to = flag('to', '').split(',').map((x) => x.trim()).filter(Boolean);
+  if (!filePath || to.length === 0) { console.error('usage: cascade publish <file> --to <fountUrl[,fountUrl...]> [--tracker <url>]'); process.exit(1); }
+  const r = await seed(filePath, to, flag('tracker', '') || undefined, num('parcel', 64 * 1024));
+  console.log(`
+  seeded ${r.name} (${r.parcels} parcels) to ${to.length} fount(s)`);
+  console.log(`  fileId ${r.fileId}
+  now: cascade get <tracker> ${r.fileId}
+`);
+  process.exit(0);
+}
+
+const COMMANDS: Record<string, () => Promise<void>> = { demo, tracker, fount: serveFount, get, publish, channel, channels: channelsList, claim: claimCmd };
 const run = COMMANDS[command ?? ''];
-if (!run) { console.error('cascade: demo | tracker | fount [--paid] | get [--pay] | channel open | channels | claim'); process.exit(1); }
+if (!run) { console.error('cascade: demo | tracker | fount [--paid] [--accept MB] | publish <file> --to <urls> | get [--pay] | channel open | channels | claim'); process.exit(1); }
 run().catch((e: unknown) => { console.error(`\n  ${e instanceof Error ? e.message : String(e)}\n`); process.exit(1); });
