@@ -55,3 +55,28 @@ export async function gatherWithReceipts(opts: { manifest: Manifest; holders: Ho
   const { bytes, complete } = assemble(manifest, got);
   return { bytes, complete, receipts, faults };
 }
+
+/**
+ * Pull a run of parcels from ONE publisher-pays fount, doing the receipt handshake: each request
+ * carries the viewer's key and the receipt for the previous parcel, so the fount extends at most one
+ * parcel of credit before it needs acknowledgement (see [[receiptline]]). The viewer pays nothing; it
+ * returns the parcels it verified and the receipts the fount can claim against the publisher.
+ */
+export async function receiptPull(opts: { fountUrl: string; manifest: Manifest; indices: number[]; viewerSk: string; viewerPubkey: string }): Promise<{ parcels: Map<number, Uint8Array>; receipts: Receipt[] }> {
+  const { fountUrl, manifest, indices, viewerSk, viewerPubkey } = opts;
+  const parcels = new Map<number, Uint8Array>();
+  const receipts: Receipt[] = [];
+  let last: Receipt | null = null;
+  for (const index of indices) {
+    const headers: Record<string, string> = last ? { 'x-receipt': JSON.stringify(last) } : {};
+    const res = await fetch(`${fountUrl}/kascade/parcel?file=${manifest.fileId}&i=${index}&viewer=${viewerPubkey}`, { headers });
+    if (!res.ok) break; // cut off (no receipt) or refused -- keep what verified
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    if (!verifyParcel(manifest, index, bytes)) break;
+    parcels.set(index, bytes);
+    last = signReceipt(viewerSk, { fileId: manifest.fileId, index, bytes: bytes.length, fountUrl });
+    receipts.push(last);
+  }
+  if (last) await fetch(`${fountUrl}/kascade/receipt?file=${manifest.fileId}&viewer=${viewerPubkey}`, { headers: { 'x-receipt': JSON.stringify(last) } }).catch(() => undefined);
+  return { parcels, receipts };
+}

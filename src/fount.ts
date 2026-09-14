@@ -16,6 +16,8 @@ import type { AddressInfo } from 'node:net';
 import type { Voucher, ChannelRef, ChannelProposal } from 'metered-protocol';
 import { verifyParcel, type Manifest } from './manifest.js';
 import { Creditline } from './creditline.js';
+import { ReceiptLine, receiptGate } from './receiptline.js';
+import type { Receipt } from './receipt.js';
 import { ParcelCache } from './cache.js';
 
 /** What a fount physically holds: a manifest and the bytes of the parcels it actually has. */
@@ -52,6 +54,12 @@ export interface FountOptions {
   /** Opt in to accepting content PUSHED to this fount (a publisher seeding it), up to this many
    *  bytes. Absent, /kascade/store is off and the fount serves only what it was given. */
   acceptBytes?: number;
+  /** Serve PUBLISHER-PAYS: free to the viewer, but require the viewer's receipt for the previous
+   *  parcel before serving the next (the receipt handshake). The fount claims those receipts against
+   *  the publisher's budget, not the viewer's wallet. */
+  publisherPays?: boolean;
+  /** Called whenever a receipt is accepted -- how a publisher-pays fount persists what it can claim. */
+  onReceipt?: (r: Receipt) => void;
 }
 
 export interface CreditContext {
@@ -126,6 +134,8 @@ export function fount(opts: FountOptions): { server: Server; url: () => string; 
   };
 
   const lines = new Map<string, Creditline>();
+  const receiptLines = new Map<string, ReceiptLine>();
+  const selfUrl = (req: IncomingMessage): string => `http://${req.headers.host ?? '127.0.0.1'}`;
   const proposals = new Map<string, CreditContext>();
   const paid = Boolean(opts.credit || opts.verifyChannel);
   const resolveCredit = (cid: string): CreditContext | null => (opts.credit ? opts.credit(cid) : proposals.get(cid) ?? null);
@@ -133,7 +143,7 @@ export function fount(opts: FountOptions): { server: Server; url: () => string; 
   const server = createServer((req: IncomingMessage, res: ServerResponse) => {
     const u = new URL(req.url ?? '/', 'http://x');
     if (u.pathname === '/kascade/have') return json(res, 200, summary());
-    if (u.pathname === '/kascade/identity') return json(res, 200, { payoutPubkey: opts.payoutPubkey ?? null, priceSompi: opts.priceSompi });
+    if (u.pathname === '/kascade/identity') return json(res, 200, { payoutPubkey: opts.payoutPubkey ?? null, priceSompi: opts.priceSompi, publisherPays: Boolean(opts.publisherPays) });
     if (u.pathname === '/kascade/propose') {
       if (!opts.verifyChannel) return json(res, 404, { error: 'this fount does not take channel proposals' });
       const verify = opts.verifyChannel;
@@ -150,6 +160,12 @@ export function fount(opts: FountOptions): { server: Server; url: () => string; 
       // record a voucher without serving -- how a gatherer pays for the LAST parcel it pulled.
       const vh = req.headers['x-voucher'];
       const g = creditGate(opts, paid, resolveCredit, lines, u.searchParams.get('channel') ?? '', typeof vh === 'string' ? vh : undefined);
+      return json(res, g.ok ? 200 : 402, g.ok ? { ok: true } : { error: g.error });
+    }
+    if (u.pathname === '/kascade/receipt') {
+      // record a receipt without serving -- how a viewer acknowledges the LAST parcel it pulled.
+      const rh = req.headers['x-receipt'];
+      const g = receiptGate(receiptLines, u.searchParams.get('viewer') ?? '', u.searchParams.get('file') ?? '', selfUrl(req), 0, typeof rh === 'string' ? rh : undefined, opts.onReceipt);
       return json(res, g.ok ? 200 : 402, g.ok ? { ok: true } : { error: g.error });
     }
     if (u.pathname === '/kascade/store') {
@@ -171,6 +187,16 @@ export function fount(opts: FountOptions): { server: Server; url: () => string; 
       const index = Number(u.searchParams.get('i'));
       const bytes = parcelOf(manifest.fileId, index);
       if (!bytes) return json(res, 404, { error: `parcel ${index} not held here` });
+      if (opts.publisherPays) {
+        const rh = req.headers['x-receipt'];
+        const g = receiptGate(receiptLines, u.searchParams.get('viewer') ?? '', manifest.fileId, selfUrl(req), index, typeof rh === 'string' ? rh : undefined, opts.onReceipt);
+        if (!g.ok) return json(res, 402, { error: g.error });
+        const served = opts.tamper ? opts.tamper(bytes, manifest.fileId, index) : bytes;
+        res.writeHead(200, { 'content-type': 'application/octet-stream', 'content-length': served.length, 'x-price-sompi': '0' });
+        res.end(Buffer.from(served));
+        g.serve();
+        return;
+      }
       const vh = req.headers['x-voucher'];
       const gate = creditGate(opts, paid, resolveCredit, lines, u.searchParams.get('channel') ?? '', typeof vh === 'string' ? vh : undefined);
       if (!gate.ok) return json(res, 402, { error: gate.error });

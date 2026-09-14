@@ -47,3 +47,32 @@ export class ReceiptLine {
     this.receipted.add(r.index);
   }
 }
+
+export type ReceiptGateResult = { ok: true; serve: () => void } | { ok: false; error: string };
+
+/**
+ * The publisher-pays gate at the fount: one ReceiptLine per (viewer, file), bound to this fount's url.
+ * It records the receipt a request carries (for the previously delivered parcel), then decides whether
+ * one more parcel may be served. This is the receipt twin of the fount's voucher credit gate.
+ */
+export function receiptGate(
+  lines: Map<string, ReceiptLine>,
+  viewerPubkey: string,
+  fileId: string,
+  fountUrl: string,
+  index: number,
+  receiptHeader?: string,
+  onReceipt?: (r: Receipt) => void,
+): ReceiptGateResult {
+  if (!viewerPubkey) return { ok: false, error: 'a viewer public key is required' };
+  const key = `${viewerPubkey}#${fileId}`;
+  let line = lines.get(key);
+  if (!line) { line = new ReceiptLine(viewerPubkey, fileId, fountUrl); lines.set(key, line); }
+  if (receiptHeader) {
+    try { const r = JSON.parse(receiptHeader) as Receipt; line.recordReceipt(r); onReceipt?.(r); }
+    catch { return { ok: false, error: 'receipt rejected' }; }
+  }
+  if (!line.mayServe()) return { ok: false, error: 'a receipt for the parcel already delivered is required first' };
+  const l = line;
+  return { ok: true, serve: () => l.served(index) };
+}
