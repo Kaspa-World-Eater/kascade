@@ -1,14 +1,12 @@
 /**
- * A whole file, pulled across the Meridian and paid per parcel: one [[paidpull]] per fount, at once.
+ * A whole file, pulled across the Meridian and paid per parcel, with reroute around a bad fount.
  *
- * The free pull ([[consumer]]) grabs parcels ad hoc from whoever answers. A PAID pull is tidier,
- * because payment is per channel and there is one channel per fount: assign every parcel to a fount
- * that holds it and that the gatherer has a channel with, then run a paidPull against each fount in
- * parallel. Each fount is paid, per parcel, only for what it served, and ends holding one final
- * voucher it can claim. Reassembly is the same as ever — the parcels carry their own index.
- *
- * This is the Meridian doing paid delivery end to end, off chain; the vouchers each fount collects are
- * what it later claims on the kaspa-x402 rail (proven live in tools/prove-live-meridian.ts).
+ * Each parcel is assigned to a fount that holds it and that the gatherer has a channel with, and each
+ * fount is pulled from in parallel ([[paidpull]]). If a fount refuses or serves junk, it delivers only
+ * what it verified; the parcels it did NOT deliver are reassigned to other payable holders and pulled
+ * again, until the file is complete or no untried holder is left. A fount may be pulled from more than
+ * once across passes, so its voucher ceiling is threaded cumulatively -- the same rule channel reuse
+ * uses. The liar is paid for nothing; the file still completes from the honest ones.
  */
 import type { Voucher, ChannelRef } from 'metered-protocol';
 import type { Manifest } from './manifest.js';
@@ -22,7 +20,10 @@ export interface PaidGatherOptions {
   /** the channel the gatherer holds with each fount, by fount url */
   channelByFount: Record<string, ChannelRef>;
   buyerSk: string;
+  /** fallback price when a fount's own advertised price is unknown */
   priceSompi: number;
+  /** each fount's advertised price (sompi/byte), by url -- so the gatherer pays what the fount charges */
+  priceByFount?: Record<string, number>;
   /** ceiling already vouched on each fount's channel, by fount url -- so a reused channel resumes. */
   vouchedByFount?: Record<string, number>;
 }
@@ -33,36 +34,56 @@ export interface PaidGatherResult {
   perFount: Record<string, { parcels: number; sompi: number; voucher: Voucher }>;
 }
 
-/** Give each parcel to one fount that holds it and that the gatherer can pay (least-loaded first). */
-function assign(manifest: Manifest, holders: Holder[], channelByFount: Record<string, ChannelRef>): Map<string, number[]> {
+/** Payable holders for each parcel: founts that hold it AND that the gatherer has a channel with. */
+function candidatesFor(manifest: Manifest, holders: Holder[], channelByFount: Record<string, ChannelRef>): Map<number, string[]> {
   const byIndex = new Map<number, string[]>();
   for (const h of holders) {
-    if (!channelByFount[h.url]) continue; // can't pay this fount -- skip it
+    if (!channelByFount[h.url]) continue;
     for (const i of h.indices) byIndex.set(i, [...(byIndex.get(i) ?? []), h.url]);
   }
-  const perFount = new Map<string, number[]>();
-  const usage = new Map<string, number>();
-  for (const p of manifest.parcels) {
-    const pick = (byIndex.get(p.index) ?? []).sort((a, b) => (usage.get(a) ?? 0) - (usage.get(b) ?? 0))[0];
-    if (!pick) continue; // no payable holder for this parcel
-    usage.set(pick, (usage.get(pick) ?? 0) + 1);
-    perFount.set(pick, [...(perFount.get(pick) ?? []), p.index]);
-  }
-  return perFount;
+  return byIndex;
 }
 
-/** Pull a whole file across the Meridian, paying each fount per parcel over its own channel. */
+/** Assign each not-yet-gathered parcel to a least-loaded payable holder not already tried for it. */
+function assignRemaining(manifest: Manifest, candidates: Map<number, string[]>, got: Map<number, Uint8Array>, tried: Set<string>): Map<string, number[]> {
+  const load = new Map<string, number>();
+  const out = new Map<string, number[]>();
+  for (const p of manifest.parcels) {
+    if (got.has(p.index)) continue;
+    const pick = (candidates.get(p.index) ?? []).filter((u) => !tried.has(`${u}#${p.index}`)).sort((a, b) => (load.get(a) ?? 0) - (load.get(b) ?? 0))[0];
+    if (!pick) continue;
+    load.set(pick, (load.get(pick) ?? 0) + 1);
+    out.set(pick, [...(out.get(pick) ?? []), p.index]);
+  }
+  return out;
+}
+
+/** Pull a whole file, paying each fount its own price per parcel, rerouting misses to other holders. */
 export async function gatherPaid(opts: PaidGatherOptions): Promise<PaidGatherResult> {
-  const { manifest, channelByFount, buyerSk, priceSompi } = opts;
-  const assignment = assign(manifest, opts.holders, channelByFount);
+  const { manifest, channelByFount, buyerSk } = opts;
+  const priceFor = (url: string): number => opts.priceByFount?.[url] ?? opts.priceSompi;
+  const candidates = candidatesFor(manifest, opts.holders, channelByFount);
   const perFount: PaidGatherResult['perFount'] = {};
   const got = new Map<number, Uint8Array>();
+  const runningVouched: Record<string, number> = {}; // sompi vouched this gather so far, per fount
+  const tried = new Set<string>(); // "url#index" already attempted
 
-  await Promise.all([...assignment.entries()].map(async ([url, indices]) => {
-    const pulled = await paidPull({ fountUrl: url, manifest, indices, channel: channelByFount[url] as ChannelRef, buyerSk, priceSompi, previouslyVouched: opts.vouchedByFount?.[url] ?? 0 });
-    for (const [i, b] of pulled.parcels) got.set(i, b);
-    perFount[url] = { parcels: pulled.parcels.size, sompi: pulled.paidSompi, voucher: pulled.voucher };
-  }));
+  for (;;) {
+    const assignment = assignRemaining(manifest, candidates, got, tried);
+    if (assignment.size === 0) break; // nothing left we can try
+    const before = got.size;
+    await Promise.all([...assignment.entries()].map(async ([url, indices]) => {
+      for (const i of indices) tried.add(`${url}#${i}`);
+      const previouslyVouched = (opts.vouchedByFount?.[url] ?? 0) + (runningVouched[url] ?? 0);
+      const pulled = await paidPull({ fountUrl: url, manifest, indices, channel: channelByFount[url] as ChannelRef, buyerSk, priceSompi: priceFor(url), previouslyVouched });
+      if (pulled.parcels.size === 0 || !pulled.voucher) return; // this fount gave nothing usable
+      for (const [i, b] of pulled.parcels) got.set(i, b);
+      runningVouched[url] = (runningVouched[url] ?? 0) + pulled.paidSompi;
+      const e = perFount[url];
+      perFount[url] = { parcels: (e?.parcels ?? 0) + pulled.parcels.size, sompi: (e?.sompi ?? 0) + pulled.paidSompi, voucher: pulled.voucher };
+    }));
+    if (got.size === before) break; // a whole pass added nothing -- give up, return what we have
+  }
 
   const { bytes, complete } = assemble(manifest, got);
   return { bytes, complete, perFount };

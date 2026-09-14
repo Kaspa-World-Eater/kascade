@@ -49,10 +49,8 @@ test('paid delivery is refused until the channel is proposed, then it works', as
   await listen(f.server);
   const url = `http://127.0.0.1:${(f.server.address() as AddressInfo).port}`;
   try {
-    await assert.rejects(
-      () => paidPull({ fountUrl: url, manifest: m, indices: [0, 1], channel, buyerSk, priceSompi: 1 }),
-      /402/, 'no credit before the channel is accepted',
-    );
+    const before = await paidPull({ fountUrl: url, manifest: m, indices: [0, 1], channel, buyerSk, priceSompi: 1 });
+    assert.equal(before.parcels.size, 0, 'no parcels before the channel is accepted -- the fount 402s and the pull yields nothing');
     const res = await fetch(`${url}/kascade/propose`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ proposal: { covenantId: COV }, buyerPubkey: buyerPk }) });
     assert.equal(res.status, 200, 'the fount accepts the proposal');
     const out = await paidPull({ fountUrl: url, manifest: m, indices: [0, 1], channel, buyerSk, priceSompi: 1 });

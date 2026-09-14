@@ -103,20 +103,24 @@
   $('copy').onclick = () => navigator.clipboard.writeText($('addr').textContent);
   $('refresh').onclick = loadWallet;
   $('open').onclick = async () => {
+    $('open').disabled = true;
     $('openOut').textContent = 'opening…';
     try {
       const r = await post('/api/channel', { fountUrl: $('fount').value, escrowSompi: Math.round(Number($('escrow').value) * 1e8) });
       $('openOut').textContent = r.error ? 'error: ' + r.error : 'opened ' + r.covenantId.slice(0, 24) + '…';
       loadChans(); loadWallet();
     } catch (e) { $('openOut').textContent = 'error: ' + e.message; }
+    finally { $('open').disabled = false; }
   };
   $('gather').onclick = async () => {
+    $('gather').disabled = true;
     $('gatherOut').textContent = 'gathering…';
     try {
       const r = await post('/api/gather', { trackerUrl: $('tracker').value, fileId: $('file').value });
       $('gatherOut').textContent = r.error ? 'error: ' + r.error : (r.complete ? 'complete' : 'incomplete') + ' — ' + r.founts + ' fount(s), file written server-side';
       loadWallet();
     } catch (e) { $('gatherOut').textContent = 'error: ' + e.message; }
+    finally { $('gather').disabled = false; }
   };
   loadWallet(); loadChans();
 </script>

@@ -133,7 +133,7 @@ export function fount(opts: FountOptions): { server: Server; url: () => string; 
   const server = createServer((req: IncomingMessage, res: ServerResponse) => {
     const u = new URL(req.url ?? '/', 'http://x');
     if (u.pathname === '/kascade/have') return json(res, 200, summary());
-    if (u.pathname === '/kascade/identity') return json(res, 200, { payoutPubkey: opts.payoutPubkey ?? null });
+    if (u.pathname === '/kascade/identity') return json(res, 200, { payoutPubkey: opts.payoutPubkey ?? null, priceSompi: opts.priceSompi });
     if (u.pathname === '/kascade/propose') {
       if (!opts.verifyChannel) return json(res, 404, { error: 'this fount does not take channel proposals' });
       const verify = opts.verifyChannel;
