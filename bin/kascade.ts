@@ -64,7 +64,8 @@ async function serveFount(): Promise<void> {
   const f = fount(options);
   await new Promise<void>((r) => f.server.listen(num('port', 0), '127.0.0.1', r));
   const url = `http://127.0.0.1:${port(f.server)}`;
-  for (const h of options.held) await announceTo(trackerUrl, h.manifest.fileId, url, [...h.parcels.keys()]);
+  if (trackerUrl) for (const h of options.held) await announceTo(trackerUrl, h.manifest.fileId, url, [...h.parcels.keys()]);
+  if (dhtUrl) { const c = await dhtClient(dhtUrl, `fount-${url}`); for (const h of options.held) await c.announce(idFromHex(h.manifest.fileId), url); }
   console.log(`\n  fount on ${url}  —  ${options.held.length} file(s) at ${price} sompi/byte${has('paid') ? ', PAID (a channel is required)' : ' (free)'}`);
   for (const h of options.held) console.log(`    ${h.manifest.fileId.slice(0, 16)}…  ${h.manifest.name}  (${h.parcels.size}/${h.manifest.parcels.length} parcels)`);
   console.log('');
