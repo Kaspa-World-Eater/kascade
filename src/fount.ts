@@ -19,6 +19,7 @@ import { Creditline } from './creditline.js';
 import { ReceiptLine, receiptGate } from './receiptline.js';
 import type { Receipt } from './receipt.js';
 import { ParcelCache } from './cache.js';
+import { json, readBody } from './http.js';
 
 /** What a fount physically holds: a manifest and the bytes of the parcels it actually has. */
 export interface Held {
@@ -98,20 +99,6 @@ interface HoldingSummary {
   parcelSize: number;
   indices: number[];
 }
-
-const json = (res: ServerResponse, code: number, body: unknown): void => {
-  const s = JSON.stringify(body);
-  res.writeHead(code, { 'content-type': 'application/json', 'content-length': Buffer.byteLength(s) });
-  res.end(s);
-};
-
-const readBody = (req: IncomingMessage): Promise<unknown> =>
-  new Promise((resolve, reject) => {
-    const parts: Buffer[] = [];
-    req.on('data', (d: Buffer) => parts.push(d));
-    req.on('end', () => { try { resolve(JSON.parse(Buffer.concat(parts).toString() || '{}')); } catch (e) { reject(e); } });
-    req.on('error', reject);
-  });
 
 /** Start a fount serving what it holds. Returns the server and the url it is reachable at. */
 export function fount(opts: FountOptions): { server: Server; url: () => string; summary: () => HoldingSummary[] } {
