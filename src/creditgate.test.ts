@@ -66,3 +66,18 @@ test('an unknown channel is refused outright', async () => {
     assert.equal((await ask(url, fileId, 0, undefined, 'ff'.repeat(32))).status, 402, 'a channel the fount does not accept');
   } finally { await close(f.server); }
 });
+
+test('a fount resuming a channel refuses a voucher below the channel\'s prior ceiling', async () => {
+  // Simulates a RESTARTED fount: the channel was already vouched to 200 before this process began,
+  // supplied as vouchedSompi. A voucher that does not resume from there must buy nothing.
+  const m = buildManifest('clip.bin', file, 100);
+  const parcels = new Map(m.parcels.map((p) => [p.index, file.subarray(p.index * 100, p.index * 100 + p.size)]));
+  const f = fount({ held: [{ manifest: m, parcels }], priceSompi: 1, credit: (cid) => (cid === COV ? { channel, buyerPubkey: buyerPk, vouchedSompi: 200 } : null) });
+  await listen(f.server);
+  const url = `http://127.0.0.1:${(f.server.address() as AddressInfo).port}`;
+  try {
+    assert.equal((await ask(url, m.fileId, 0)).status, 200, 'one new parcel on resume credit');
+    assert.equal((await ask(url, m.fileId, 1, voucher(100))).status, 402, 'a voucher below the resumed ceiling (200) buys nothing');
+    assert.equal((await ask(url, m.fileId, 1, voucher(300))).status, 200, 'a voucher resuming to 300 (200 prior + 100 new) serves');
+  } finally { await close(f.server); }
+});

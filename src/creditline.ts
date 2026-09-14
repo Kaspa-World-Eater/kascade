@@ -15,10 +15,19 @@ import { verifyVoucher, type Voucher, type ChannelRef } from 'metered-protocol';
 export class VoucherRejected extends Error {}
 
 export class Creditline {
-  private delivered = 0; // sompi worth of parcels handed over
-  private vouched = 0;   // sompi covered by the latest good voucher
+  private delivered: number; // sompi worth of parcels handed over
+  private vouched: number;   // sompi covered by the latest good voucher
 
-  constructor(private readonly channel: ChannelRef, private readonly buyerPubkey: string) {}
+  /**
+   * `alreadyVouched` is the channel's cumulative ceiling BEFORE this line existed -- what a fount
+   * rebuilds a line to after a restart, so a channel that was vouched to N resumes with nothing new
+   * owed rather than treating the buyer's resumed voucher as N of free prepaid credit. Zero is a
+   * channel with no history, the ordinary case.
+   */
+  constructor(private readonly channel: ChannelRef, private readonly buyerPubkey: string, alreadyVouched = 0) {
+    this.delivered = alreadyVouched;
+    this.vouched = alreadyVouched;
+  }
 
   /** How much the fount is currently owed — parcels delivered but not yet vouched. */
   outstanding(): number {

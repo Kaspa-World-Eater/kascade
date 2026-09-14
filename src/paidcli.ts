@@ -13,7 +13,7 @@ import { proposalFor, type Network } from 'metered-protocol/rail';
 import { identity } from './keys.js';
 import { open, claim, recall, channelWith, sellerChannels, refund, vouchedOn, bumpVouched } from './channel.js';
 import { stock, type StockFile } from './stock.js';
-import type { FountOptions } from './fount.js';
+import type { FountOptions, CreditContext } from './fount.js';
 import type { Manifest } from './manifest.js';
 import { discover } from './tracker.js';
 import { gatherPaid, type PaidGatherResult } from './paidgather.js';
@@ -32,16 +32,40 @@ const loadVoucher = (covenantId: string): Voucher | null => {
   return existsSync(f) ? (JSON.parse(readFileSync(f, 'utf8')) as Voucher) : null;
 };
 
+const ADIR = join(homedir(), '.kascade', 'accepted');
+
+/** An accepted channel, persisted so it survives a fount restart (the in-memory proposal map does not). */
+interface Accepted { covenantId: string; buyerPubkey: string }
+function saveAccepted(a: Accepted): void {
+  mkdirSync(ADIR, { recursive: true });
+  writeFileSync(join(ADIR, `${a.covenantId}.json`), JSON.stringify(a), { mode: 0o600 });
+}
+const loadAccepted = (covenantId: string): Accepted | null => {
+  const f = join(ADIR, `${covenantId}.json`);
+  return existsSync(f) ? (JSON.parse(readFileSync(f, 'utf8')) as Accepted) : null;
+};
+
 /** Fount options for PAID mode: advertise identity, verify a proposed channel on chain, persist vouchers. */
 export function paidFountOptions(files: StockFile[], network: Network, priceSompi: number, capBytes: number): FountOptions {
   const payout = identity('fount');
   const { held } = stock(files, capBytes);
   const verify = sellerChannels(payout.publicKeyHex, network, 0);
+  const netTag = `kaspa:${network}`;
+  // Resume a channel where its highest stored voucher left off, so a restarted fount keeps the
+  // per-parcel bound instead of treating a resumed voucher as free prepaid credit.
+  const contextFor = (covenantId: string, buyerPubkey: string): CreditContext =>
+    ({ channel: { network: netTag, covenantId }, buyerPubkey, vouchedSompi: Number(loadVoucher(covenantId)?.amount ?? 0) });
   return {
     held, priceSompi, payoutPubkey: payout.publicKeyHex,
+    // Every request resolves through the persisted accepted-channel store, so an accepted channel
+    // survives a restart that empties the in-memory proposal map.
+    credit: (covenantId) => { const a = loadAccepted(covenantId); return a ? contextFor(covenantId, a.buyerPubkey) : null; },
+    // First contact still verifies the channel on chain, then persists it as accepted.
     verifyChannel: async (proposal, buyerPubkey) => {
       const ok = await verify(buyerPubkey, proposal);
-      return ok ? { channel: { network: `kaspa:${network}`, covenantId: proposal.covenantId }, buyerPubkey } : null;
+      if (!ok) return null;
+      saveAccepted({ covenantId: proposal.covenantId, buyerPubkey });
+      return contextFor(proposal.covenantId, buyerPubkey);
     },
     onVoucher: (cov, v) => saveVoucher(cov, v),
   };

@@ -57,3 +57,14 @@ test('a voucher may never go down — the ceiling only rises', () => {
   c.recordVoucher(voucher(2000));
   assert.throws(() => c.recordVoucher(voucher(1000)), VoucherRejected);
 });
+
+test('a creditline resumed at a prior ceiling keeps the one-parcel bound (a restarted fount is not tricked into free credit)', () => {
+  // After a restart the fount rebuilds the line for a channel that was already vouched to 10000.
+  const c = new Creditline(channel, buyerPk, 10000);
+  assert.equal(c.mayServe(), true, 'on resume, nothing new is owed');
+  c.served(1000);
+  c.recordVoucher(voucher(11000)); // the gatherer resumes cumulatively: 10000 + 1000
+  assert.equal(c.mayServe(), true, 'that new parcel is now paid');
+  c.served(1000); // a SECOND new parcel, not yet vouched
+  assert.equal(c.mayServe(), false, 'still only one parcel of credit beyond the resumed ceiling');
+});

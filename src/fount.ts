@@ -57,6 +57,9 @@ export interface FountOptions {
 export interface CreditContext {
   channel: ChannelRef;
   buyerPubkey: string;
+  /** The channel's cumulative ceiling already vouched before this fount process saw it -- so a
+   *  restarted fount rebuilds the creditline at the right point instead of extending free credit. */
+  vouchedSompi?: number;
 }
 
 type Gate = { ok: true; charge: (sompi: number) => void } | { ok: false; error: string };
@@ -67,7 +70,7 @@ function creditGate(opts: FountOptions, paid: boolean, resolve: (covenantId: str
   const ctx = resolve(covenantId);
   if (!ctx) return { ok: false, error: 'this fount does not accept that channel' };
   let line = lines.get(covenantId);
-  if (!line) { line = new Creditline(ctx.channel, ctx.buyerPubkey); lines.set(covenantId, line); }
+  if (!line) { line = new Creditline(ctx.channel, ctx.buyerPubkey, ctx.vouchedSompi ?? 0); lines.set(covenantId, line); }
   if (voucherHeader) {
     try {
       const v = JSON.parse(voucherHeader) as Voucher;
