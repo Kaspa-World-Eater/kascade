@@ -55,3 +55,22 @@ test('a cooperating viewer completes the file paying ZERO; the publisher settles
     assert.deepEqual(s.pay, [{ url, sompi: 400 * 2 }], 'the publisher pays the fount for the bytes it delivered');
   } finally { await close(f.server); }
 });
+
+test('a require-auth fount serves only publisher-authorized viewers', async () => {
+  const { signAuthToken } = await import('./authtoken.js');
+  const publisherSk = 'c3'.repeat(32);
+  const publisherPk = publicKeyHex(publisherSk);
+  const f = fount({ held: [{ manifest: m, parcels: parcels() }] as Held[], priceSompi: 0, publisherPays: true, requireAuth: publisherPk });
+  await listen(f.server);
+  const url = `http://127.0.0.1:${(f.server.address() as AddressInfo).port}`;
+  try {
+    // No token -> the fount earns the viewer nothing.
+    const bare = await receiptPull({ fountUrl: url, manifest: m, indices: [0, 1, 2, 3], viewerSk, viewerPubkey: viewerPk });
+    assert.equal(bare.parcels.size, 0, 'an unauthorized viewer is refused');
+
+    // A publisher-signed token for THIS viewer and file -> served.
+    const token = signAuthToken(publisherSk, { viewerPubkey: viewerPk, fileId: m.fileId, expiry: Date.now() + 60_000 });
+    const ok = await receiptPull({ fountUrl: url, manifest: m, indices: [0, 1, 2, 3], viewerSk, viewerPubkey: viewerPk, authToken: token });
+    assert.equal(ok.parcels.size, 4, 'an authorized viewer gets the whole file');
+  } finally { await close(f.server); }
+});

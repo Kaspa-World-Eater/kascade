@@ -144,7 +144,11 @@ over the receipt handshake paying **zero**, and the fount claims what it earned 
 viewer is a real, distinct person. A fount colluding with a fake viewer can mint receipts for a budget.
 Signatures and covenants cannot separate a real consumer from a sock puppet; that is a sybil/reputation
 problem, still open. What is closed: no pay for junk, no double-count of a parcel, and the viewer pays
-nothing. Why it can't be solved by crypto, how the field (Saturn, Meson) actually handles it, and the
+nothing. **Recommendation #1 is now built:** a fount can run with `requireAuth` set to a publisher's key,
+and then earns a receipt only from a viewer carrying a publisher-signed token (`src/authtoken.ts`:
+`signAuthToken`/`verifyAuthToken`, bound to viewer key + file + expiry). For the case that pays — a
+site delivering its own content to its own users — collusion would require the publisher to collude
+against its own budget. The open-mesh case stays a stake-and-detect problem. Why it can't be solved by crypto, how the field (Saturn, Meson) actually handles it, and the
 two honest modes we recommend — publisher-authorized viewers, and stake-and-detect for the open mesh —
 are written up in **[docs/publisher-pays-collusion.md](docs/publisher-pays-collusion.md)**.
 

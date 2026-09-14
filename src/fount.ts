@@ -61,6 +61,10 @@ export interface FountOptions {
   publisherPays?: boolean;
   /** Called whenever a receipt is accepted -- how a publisher-pays fount persists what it can claim. */
   onReceipt?: (r: Receipt) => void;
+  /** Require the viewer to present a publisher-signed authorization token (this publisher's pubkey).
+   *  Set, the fount earns only from viewers the publisher authorized -- closing publisher-pays
+   *  collusion for the case the publisher knows its audience. Absent, any viewer may be served. */
+  requireAuth?: string;
 }
 
 export interface CreditContext {
@@ -151,8 +155,8 @@ export function fount(opts: FountOptions): { server: Server; url: () => string; 
     }
     if (u.pathname === '/kascade/receipt') {
       // record a receipt without serving -- how a viewer acknowledges the LAST parcel it pulled.
-      const rh = req.headers['x-receipt'];
-      const g = receiptGate(receiptLines, u.searchParams.get('viewer') ?? '', u.searchParams.get('file') ?? '', selfUrl(req), 0, typeof rh === 'string' ? rh : undefined, opts.onReceipt);
+      const rh = req.headers['x-receipt']; const xa = req.headers['x-auth'];
+      const g = receiptGate(receiptLines, u.searchParams.get('viewer') ?? '', u.searchParams.get('file') ?? '', selfUrl(req), 0, typeof rh === 'string' ? rh : undefined, opts.onReceipt, opts.requireAuth, typeof xa === 'string' ? xa : undefined);
       return json(res, g.ok ? 200 : 402, g.ok ? { ok: true } : { error: g.error });
     }
     if (u.pathname === '/kascade/store') {
@@ -175,8 +179,8 @@ export function fount(opts: FountOptions): { server: Server; url: () => string; 
       const bytes = parcelOf(manifest.fileId, index);
       if (!bytes) return json(res, 404, { error: `parcel ${index} not held here` });
       if (opts.publisherPays) {
-        const rh = req.headers['x-receipt'];
-        const g = receiptGate(receiptLines, u.searchParams.get('viewer') ?? '', manifest.fileId, selfUrl(req), index, typeof rh === 'string' ? rh : undefined, opts.onReceipt);
+        const rh = req.headers['x-receipt']; const xa = req.headers['x-auth'];
+        const g = receiptGate(receiptLines, u.searchParams.get('viewer') ?? '', manifest.fileId, selfUrl(req), index, typeof rh === 'string' ? rh : undefined, opts.onReceipt, opts.requireAuth, typeof xa === 'string' ? xa : undefined);
         if (!g.ok) return json(res, 402, { error: g.error });
         const served = opts.tamper ? opts.tamper(bytes, manifest.fileId, index) : bytes;
         res.writeHead(200, { 'content-type': 'application/octet-stream', 'content-length': served.length, 'x-price-sompi': '0' });

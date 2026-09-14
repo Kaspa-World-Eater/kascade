@@ -62,13 +62,14 @@ export async function gatherWithReceipts(opts: { manifest: Manifest; holders: Ho
  * parcel of credit before it needs acknowledgement (see [[receiptline]]). The viewer pays nothing; it
  * returns the parcels it verified and the receipts the fount can claim against the publisher.
  */
-export async function receiptPull(opts: { fountUrl: string; manifest: Manifest; indices: number[]; viewerSk: string; viewerPubkey: string }): Promise<{ parcels: Map<number, Uint8Array>; receipts: Receipt[] }> {
+export async function receiptPull(opts: { fountUrl: string; manifest: Manifest; indices: number[]; viewerSk: string; viewerPubkey: string; authToken?: unknown }): Promise<{ parcels: Map<number, Uint8Array>; receipts: Receipt[] }> {
   const { fountUrl, manifest, indices, viewerSk, viewerPubkey } = opts;
+  const auth: Record<string, string> = opts.authToken ? { 'x-auth': JSON.stringify(opts.authToken) } : {};
   const parcels = new Map<number, Uint8Array>();
   const receipts: Receipt[] = [];
   let last: Receipt | null = null;
   for (const index of indices) {
-    const headers: Record<string, string> = last ? { 'x-receipt': JSON.stringify(last) } : {};
+    const headers: Record<string, string> = last ? { 'x-receipt': JSON.stringify(last), ...auth } : { ...auth };
     const res = await fetch(`${fountUrl}/kascade/parcel?file=${manifest.fileId}&i=${index}&viewer=${viewerPubkey}`, { headers });
     if (!res.ok) break; // cut off (no receipt) or refused -- keep what verified
     const bytes = new Uint8Array(await res.arrayBuffer());
@@ -77,6 +78,6 @@ export async function receiptPull(opts: { fountUrl: string; manifest: Manifest; 
     last = signReceipt(viewerSk, { fileId: manifest.fileId, index, bytes: bytes.length, fountUrl });
     receipts.push(last);
   }
-  if (last) await fetch(`${fountUrl}/kascade/receipt?file=${manifest.fileId}&viewer=${viewerPubkey}`, { headers: { 'x-receipt': JSON.stringify(last) } }).catch(() => undefined);
+  if (last) await fetch(`${fountUrl}/kascade/receipt?file=${manifest.fileId}&viewer=${viewerPubkey}`, { headers: { 'x-receipt': JSON.stringify(last), ...auth } }).catch(() => undefined);
   return { parcels, receipts };
 }

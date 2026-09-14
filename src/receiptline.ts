@@ -9,6 +9,7 @@
  * that never acknowledges delivery.
  */
 import { verifyReceipt, type Receipt } from './receipt.js';
+import { authOk } from './authtoken.js';
 
 export class ReceiptRejected extends Error {}
 
@@ -63,8 +64,11 @@ export function receiptGate(
   index: number,
   receiptHeader?: string,
   onReceipt?: (r: Receipt) => void,
+  requireAuth?: string,
+  authHeader?: string,
 ): ReceiptGateResult {
   if (!viewerPubkey) return { ok: false, error: 'a viewer public key is required' };
+  if (!authOk(requireAuth, authHeader, viewerPubkey, fileId)) return { ok: false, error: 'viewer not authorized by the publisher' };
   const key = `${viewerPubkey}#${fileId}`;
   let line = lines.get(key);
   if (!line) { line = new ReceiptLine(viewerPubkey, fileId, fountUrl); lines.set(key, line); }
