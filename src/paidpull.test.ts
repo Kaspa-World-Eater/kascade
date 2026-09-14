@@ -38,3 +38,20 @@ test('paidPull pays per parcel and receives the whole file from a credit-enforci
     assert.equal(Number(out.voucher.amount), m.size, 'the final voucher covers everything delivered');
   } finally { await close(f.server); }
 });
+
+test('a channel reused for a second gather resumes the cumulative ceiling, it does not reset to zero', async () => {
+  const m = buildManifest('clip.bin', file, 100); // 4 parcels: 100,100,100,20
+  const parcels = new Map(m.parcels.map((p) => [p.index, file.subarray(p.index * 100, p.index * 100 + p.size)]));
+  const f = fount({ held: [{ manifest: m, parcels }], priceSompi: 1, credit: (cid) => (cid === COV ? { channel, buyerPubkey: buyerPk } : null) });
+  await listen(f.server);
+  const url = `http://127.0.0.1:${(f.server.address() as AddressInfo).port}`;
+  try {
+    // First gather buys parcels 0 and 1 over the channel.
+    const g1 = await paidPull({ fountUrl: url, manifest: m, indices: [0, 1], channel, buyerSk, priceSompi: 1 });
+    // Second gather, SAME channel, buys 2 and 3. Its vouchers must continue from g1's ceiling,
+    // because a voucher amount is a lifetime figure for the channel and may never fall.
+    const g2 = await paidPull({ fountUrl: url, manifest: m, indices: [2, 3], channel, buyerSk, priceSompi: 1, previouslyVouched: g1.paidSompi });
+    assert.equal(Number(g2.voucher.amount), g1.paidSompi + g2.paidSompi, 'the second gather vouches cumulatively over the channel');
+    assert.equal(Number(g2.voucher.amount), m.size, 'the two gathers together vouch the whole file exactly once');
+  } finally { await close(f.server); }
+});

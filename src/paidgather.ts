@@ -22,6 +22,8 @@ export interface PaidGatherOptions {
   channelByFount: Record<string, ChannelRef>;
   buyerSk: string;
   priceSompi: number;
+  /** ceiling already vouched on each fount's channel, by fount url -- so a reused channel resumes. */
+  vouchedByFount?: Record<string, number>;
 }
 
 export interface PaidGatherResult {
@@ -56,7 +58,7 @@ export async function gatherPaid(opts: PaidGatherOptions): Promise<PaidGatherRes
   const got = new Map<number, Uint8Array>();
 
   await Promise.all([...assignment.entries()].map(async ([url, indices]) => {
-    const pulled = await paidPull({ fountUrl: url, manifest, indices, channel: channelByFount[url] as ChannelRef, buyerSk, priceSompi });
+    const pulled = await paidPull({ fountUrl: url, manifest, indices, channel: channelByFount[url] as ChannelRef, buyerSk, priceSompi, previouslyVouched: opts.vouchedByFount?.[url] ?? 0 });
     for (const [i, b] of pulled.parcels) got.set(i, b);
     perFount[url] = { parcels: pulled.parcels.size, sompi: pulled.paidSompi, voucher: pulled.voucher };
   }));

@@ -11,7 +11,7 @@ import { join } from 'node:path';
 import type { Voucher } from 'metered-protocol';
 import { proposalFor, type Network } from 'metered-protocol/rail';
 import { identity } from './keys.js';
-import { open, claim, recall, channelWith, sellerChannels, refund } from './channel.js';
+import { open, claim, recall, channelWith, sellerChannels, refund, vouchedOn, bumpVouched } from './channel.js';
 import { stock, type StockFile } from './stock.js';
 import type { FountOptions } from './fount.js';
 import type { Manifest } from './manifest.js';
@@ -70,12 +70,23 @@ export async function getPaid(trackerUrl: string, fileId: string, network: Netwo
   if (holders.length === 0) throw new Error('no founts hold that file');
   const manifest = await fetchJson<Manifest>(`${holders[0]?.url}/kascade/manifest?file=${fileId}`);
   const channelByFount: Record<string, { network: string; covenantId: string }> = {};
+  const vouchedByFount: Record<string, number> = {};
+  const covByFount: Record<string, string> = {};
   for (const h of holders) {
     const { payoutPubkey } = await fetchJson<{ payoutPubkey: string | null }>(`${h.url}/kascade/identity`);
     const rec = payoutPubkey ? channelWith(payoutPubkey) : null;
-    if (rec) channelByFount[h.url] = { network: `kaspa:${network}`, covenantId: rec.channel.covenantId };
+    if (rec) {
+      channelByFount[h.url] = { network: `kaspa:${network}`, covenantId: rec.channel.covenantId };
+      vouchedByFount[h.url] = vouchedOn(rec.channel.covenantId);
+      covByFount[h.url] = rec.channel.covenantId;
+    }
   }
-  return gatherPaid({ manifest, holders, channelByFount, buyerSk: me.secretKeyHex, priceSompi });
+  const result = await gatherPaid({ manifest, holders, channelByFount, buyerSk: me.secretKeyHex, priceSompi, vouchedByFount });
+  // Persist each channel's raised ceiling so a later gather on it resumes instead of restarting.
+  for (const [url, f] of Object.entries(result.perFount)) {
+    if (f.sompi > 0 && covByFount[url]) bumpVouched(covByFount[url], (vouchedByFount[url] ?? 0) + f.sompi);
+  }
+  return result;
 }
 
 /** GATHERER: open a channel with any fount in this list it does not already have one with. */

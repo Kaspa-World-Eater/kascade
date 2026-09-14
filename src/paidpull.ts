@@ -20,14 +20,21 @@ export interface PaidPullOptions {
   channel: ChannelRef;
   buyerSk: string;
   priceSompi: number;
+  /**
+   * The lifetime ceiling already vouched on this channel before this pull. A voucher's amount is a
+   * cumulative figure for the CHANNEL, and a channel outlives one gather, so a second gather must
+   * continue from where the last left off -- signing from zero would try to lower the ceiling, and
+   * the fount rejects that. Zero (the default) is a fresh channel.
+   */
+  previouslyVouched?: number;
 }
 
-const sign = (cumulativeSompi: number, channel: ChannelRef, buyerSk: string): Voucher =>
-  voucherForState({ cumulativeSompi } as unknown as Parameters<typeof voucherForState>[0], channel, buyerSk);
+const sign = (cumulativeSompi: number, channel: ChannelRef, buyerSk: string, previouslyVouched: number): Voucher =>
+  voucherForState({ cumulativeSompi } as unknown as Parameters<typeof voucherForState>[0], channel, buyerSk, previouslyVouched);
 
 /** Pull `indices` from one credit-enforcing fount, paying per parcel; returns the parcels and the final voucher. */
 export async function paidPull(opts: PaidPullOptions): Promise<{ parcels: Map<number, Uint8Array>; voucher: Voucher; paidSompi: number }> {
-  const { fountUrl, manifest, channel, buyerSk, priceSompi } = opts;
+  const { fountUrl, manifest, channel, buyerSk, priceSompi, previouslyVouched = 0 } = opts;
   const parcels = new Map<number, Uint8Array>();
   let paidSompi = 0;
   let voucher: Voucher | undefined; // covers everything received so far; carried on the NEXT request
@@ -40,7 +47,7 @@ export async function paidPull(opts: PaidPullOptions): Promise<{ parcels: Map<nu
     if (!verifyParcel(manifest, index, bytes)) throw new Error(`parcel ${index} failed the manifest -- not paid`);
     parcels.set(index, bytes);
     paidSompi += bytes.length * priceSompi;
-    voucher = sign(paidSompi, channel, buyerSk);
+    voucher = sign(paidSompi, channel, buyerSk, previouslyVouched);
   }
   if (!voucher) throw new Error('no parcels requested');
 

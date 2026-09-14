@@ -47,3 +47,22 @@ test('gatherPaid pulls a file across three founts, paying each per parcel', asyn
     for (const p of Object.values(res.perFount)) assert.ok(Number(p.voucher.amount) === p.sompi, 'each fount holds a voucher for its share');
   } finally { await Promise.all(nodes.map((n) => close(n.f.server))); }
 });
+
+test('a second gather reuses the same channel and its voucher resumes the cumulative ceiling', async () => {
+  const m = buildManifest('movie.bin', file, 64); // 5 parcels of 64
+  const all = new Map(m.parcels.map((p) => [p.index, file.subarray(p.index * 64, p.index * 64 + p.size)]));
+  const COV = '44'.repeat(32);
+  const held: Held[] = [{ manifest: m, parcels: new Map(all) }];
+  const f = fount({ held, priceSompi: 1, credit: (cid) => (cid === COV ? { channel: { network: NET, covenantId: COV }, buyerPubkey: buyerPk } : null) });
+  await listen(f.server);
+  const url = `http://127.0.0.1:${(f.server.address() as AddressInfo).port}`;
+  const channelByFount = { [url]: { network: NET, covenantId: COV } };
+  try {
+    // First gather takes parcels 0-2 (192 sompi).
+    const g1 = await gatherPaid({ manifest: m, holders: [{ url, indices: [0, 1, 2] }], channelByFount, buyerSk, priceSompi: 1 });
+    const first = g1.perFount[url]?.sompi ?? 0;
+    // Second gather on the SAME channel takes 3-4; it must resume from the first gather's ceiling.
+    const g2 = await gatherPaid({ manifest: m, holders: [{ url, indices: [3, 4] }], channelByFount, buyerSk, priceSompi: 1, vouchedByFount: { [url]: first } });
+    assert.equal(Number(g2.perFount[url]?.voucher.amount), 320, 'the reused channel vouches the whole file cumulatively, not just the second gather');
+  } finally { await close(f.server); }
+});

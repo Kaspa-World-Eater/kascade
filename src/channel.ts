@@ -31,7 +31,7 @@ export const REFUND_FEE = 500_000n;
 export class NoChannel extends Error {}
 
 /** One record per channel, by covenant id. Amounts are strings on disk because they are bigints. */
-interface Record { channel: Channel; sellerPubkey: string; openedAt: string }
+interface Record { channel: Channel; sellerPubkey: string; openedAt: string; vouchedSompi?: number }
 
 const file = (covenantId: string) => join(HOME, `${covenantId}.json`);
 const dehydrate = (_k: string, v: unknown) => (typeof v === 'bigint' ? `${v}n` : v);
@@ -46,6 +46,22 @@ export function remember(channel: Channel, sellerPubkey: string): void {
 export function recall(covenantId: string): Record {
   if (!existsSync(file(covenantId))) throw new NoChannel(`no record of channel ${covenantId}`);
   return JSON.parse(readFileSync(file(covenantId), 'utf8'), hydrate) as Record;
+}
+
+/** The lifetime sompi ceiling this buyer has already vouched on a channel (0 if none/unknown). */
+export function vouchedOn(covenantId: string): number {
+  try {
+    return recall(covenantId).vouchedSompi ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** Raise the recorded ceiling for a channel after a gather. Never lowers it; keeps the rest of the record. */
+export function bumpVouched(covenantId: string, ceilingSompi: number): void {
+  const rec = recall(covenantId);
+  const next = Math.max(rec.vouchedSompi ?? 0, ceilingSompi);
+  writeFileSync(file(covenantId), JSON.stringify({ ...rec, vouchedSompi: next }, dehydrate, 2), { mode: 0o600 });
 }
 
 export function channels(): Record[] {
