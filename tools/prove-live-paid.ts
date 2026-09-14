@@ -74,7 +74,7 @@ async function main(): Promise<void> {
       const earned = res.perFount[n.url];
       if (!earned) { console.log(`  ${n.L.name} earned nothing`); continue; }
       const out = await claim(n.key.sk, n.cov, earned.voucher, BigInt(earned.sompi));
-      console.log(`  ${n.L.name} claimed ${kas(out.paid)} KAS over ${earned.parcels} parcels   (${out.txid.slice(0, 16)}…)`);
+      console.log(`  ${n.L.name} claimed ${kas(out.paid)} KAS over ${earned.parcels} parcels   (${out.txid})`);
       claimed.push({ name: n.L.name, sk: n.key.sk, parcels: earned.parcels, paid: out.paid, txid: out.txid });
     }
     console.log(`\n  BALANCES (read after every claim, so none races its own confirmation)`);

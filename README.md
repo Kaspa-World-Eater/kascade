@@ -67,17 +67,34 @@ the liar get **tried first, rejected by the manifest, and routed around**; the f
 **byte-identical**; and each fount paid only for the parcels it actually served -- the liar earning
 nothing (a recorded fault -- seizing a bond on-chain is designed in quorum, not built). It is pinned by a test, so it cannot quietly break.
 
-**The money is proven on chain, too.** `npx tsx tools/prove-live.ts` runs it live on Kaspa
-testnet-10: a fount starts at 0 KAS, delivers a real file, and **claims real testnet KAS** for exactly
-the parcels it served (genesis `1216fcf1…`, claim `8af4c616…`, +0.055 KAS to the fount). Same
-kaspa-x402 rail spigot and flume settle on; multi-fount is this once per fount.
+**The money is proven on chain — per parcel, and independently verifiable.** Each claim below is a
+full transaction id anyone can check on a public testnet-10 node:
 
-**The whole Meridian is proven too.** `npx tsx tools/prove-live-meridian.ts`: three founts each hold part of a
-file, a gatherer opens a channel with each, pulls it from all of them, and **each fount claims its own
-share of real testnet KAS** (0 → 0.061 / 0.061 / 0.044 KAS; claims `c76b04d4…`, `b5fdc420…`, `0f528347…`).
-One honest constraint surfaced and is documented: a fount cannot claim **dust** — a claim whose payout is
-below roughly 0.02 KAS trips Kaspa's KIP-9 storage-mass limit (a tiny output is expensive), so a fount
-accumulates earnings and settles in meaningful amounts, the way a Lightning channel is not closed over pennies.
+```bash
+curl -s https://api-tn10.kaspa.org/transactions/<txid> | grep -o '"is_accepted":[a-z]*'   # -> "is_accepted":true
+```
+
+`npx tsx tools/prove-live-paid.ts` runs the **paid per-parcel handshake** live: three founts each hold
+part of a 900 KB file and enforce the 402 rule; a gatherer opens a channel with each and **pays per
+parcel as each verifies**; each fount then claims its share of real KAS.
+
+| fount | earned | verifiable claim txid |
+|---|---|---|
+| A | 0.06053600 KAS (5 parcels) | `5c9c391131200f839b8549dfadd1fab260a03c6e2bc47d8bdd151c1a65b3058a` |
+| B | 0.06053600 KAS (5 parcels) | `cedc523c2f399fe2ea07690f47b7aa9d0ad6de1434d9e020691334b951601465` |
+| C | 0.04392800 KAS (4 parcels) | `b20cba8953cac1fd4f135cab9aecd0e7fd13f9a3f218f58afa5947ed2b1fa1df` |
+
+(A single fount start-to-finish is `tools/prove-live.ts`, which prints its own full genesis and claim ids.)
+
+**Channel reuse and fount-restart survival are proven on chain too.** `tools/prove-live-reuse.ts`
+gathers a file over **one** channel in two passes and settles the cumulative total in a single claim —
+`ccce1de7b0b607e4a7d96a76dea412f1398d89abf72f44157568a286aa9843ab` (0.175 KAS). `tools/prove-live-restart.ts`
+kills the fount mid-channel, restarts it, finishes the gather over the same channel, and claims —
+`436afd3149f5b9f7e5a6b69305a91c291a6ca1f379fceb67003f31388bcfd254` (0.175 KAS).
+
+One honest constraint is documented: a fount cannot claim **dust** — a payout below roughly 0.02 KAS
+trips Kaspa's KIP-9 storage-mass limit (a tiny output is expensive) — so a fount accumulates earnings and
+settles in meaningful amounts, the way a Lightning channel is not closed over pennies.
 
 The real commands are there too: `kascade tracker`, `kascade fount <dir> --tracker <url>`, and
 `kascade get <trackerUrl> <fileId>` run founts and gatherers as separate processes.

@@ -82,7 +82,7 @@ async function main(): Promise<void> {
       );
       const out = await claim(n.key.sk, channels.get(n.url) as string, voucher, BigInt(earned));
       rec.claim = out.txid;
-      console.log(`  ${n.name} claimed ${kas(out.paid)} KAS   (${out.txid.slice(0, 16)}…)`);
+      console.log(`  ${n.name} claimed ${kas(out.paid)} KAS   (${out.txid})`);
     }
   } finally {
     await Promise.all(founts.map((n) => new Promise<void>((r) => n.f.server.close(() => r()))));
