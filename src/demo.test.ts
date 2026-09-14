@@ -14,5 +14,5 @@ test('the live Meridian delivers byte-identical, pays per fount, and catches the
   assert.equal(d.earnings.some((e) => e.fount === 'fount-LIAR'), false, 'the liar earned nothing — junk never bills');
   assert.equal(d.totalPaidSompi, 8 * 64 * 1024 * 2, 'the whole file, once, at the price');
   assert.equal(d.settlement.pay.length, 3, 'the three honest founts are paid');
-  assert.deepEqual(d.settlement.slash, [{ url: 'fount-LIAR', faults: 2 }], 'the liar is slashed, not paid');
+  assert.deepEqual(d.settlement.faulted, [{ url: 'fount-LIAR', faults: 2 }], 'the liar is faulted, not paid');
 });

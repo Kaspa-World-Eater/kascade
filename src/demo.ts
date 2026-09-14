@@ -101,7 +101,7 @@ function withNames(s: MeridianSettlement, nameByUrl: Map<string, string>): Merid
   const nm = (u: string) => nameByUrl.get(u) ?? u;
   return {
     pay: s.pay.map((p) => ({ ...p, url: nm(p.url) })),
-    slash: s.slash.map((x) => ({ ...x, url: nm(x.url) })),
+    faulted: s.faulted.map((x) => ({ ...x, url: nm(x.url) })),
     unsettleable: s.unsettleable.map((x) => ({ ...x, url: nm(x.url) })),
     totalPaidSompi: s.totalPaidSompi,
   };

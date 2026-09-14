@@ -1,10 +1,12 @@
 /**
  * A meridian receipt becomes money on the rail: pay each fount for what it delivered, on its own
- * channel, and flag the ones that served junk to be slashed.
+ * channel, and flag the ones that served junk as faults (unpaid). NOTE: a fault records that a
+ * fount earned nothing for junk -- it does NOT seize a bond. On-chain bond-slashing is designed in
+ * quorum (docs/covenant-bond.md), not built here.
  *
  * kascade accrues earnings PER FOUNT as it downloads -- because in a meridian the file came from many
  * sellers, and each is owed only for the parcels it actually served and that verified. This turns that
- * tally into three lists a caller can act on: who to pay (and on which channel), who to slash (and how
+ * tally into three lists a caller can act on: who to pay (and on which channel), who is faulted (and how
  * badly), and who earned but left nowhere to pay them. It stays pure -- it decides, it moves nothing --
  * so the amounts can be shown and checked before a voucher is signed. The rail itself is spigot's:
  * one kaspa-x402 channel per fount, one voucher for its earned total.
@@ -13,7 +15,7 @@ import type { Receipt } from './consumer.js';
 
 export interface MeridianSettlement {
   pay: { url: string; sompi: number; channel: string }[];
-  slash: { url: string; faults: number }[];
+  faulted: { url: string; faults: number }[];
   unsettleable: { url: string; sompi: number; reason: string }[];
   totalPaidSompi: number;
 }
@@ -36,7 +38,7 @@ export function settlementFor(receipt: Receipt, channelByFount: Record<string, s
 
   const faultCount = new Map<string, number>();
   for (const f of receipt.faults) faultCount.set(f.url, (faultCount.get(f.url) ?? 0) + 1);
-  const slash = [...faultCount.entries()].map(([url, faults]) => ({ url, faults }));
+  const faulted = [...faultCount.entries()].map(([url, faults]) => ({ url, faults }));
 
-  return { pay, slash, unsettleable, totalPaidSompi };
+  return { pay, faulted, unsettleable, totalPaidSompi };
 }

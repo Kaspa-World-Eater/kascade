@@ -2,8 +2,8 @@
  * Turning a meridian receipt into money on the rail, pinned FIRST (test-driven):
  *   - every fount that earned and has a channel is paid exactly what it earned, on that channel;
  *   - a fount that earned but registered no channel is reported unsettleable, never dropped;
- *   - a fount that served junk is flagged to slash -- and if it also served good parcels, it is
- *     BOTH paid for the good and slashed for the junk, because the two are counted per parcel.
+ *   - a fount that served junk is flagged as a fault -- and if it also served good parcels, it is
+ *     BOTH paid for the good and faulted for the junk, because the two are counted per parcel.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -25,7 +25,7 @@ test('each earner with a channel is paid exactly what it earned, on that channel
     [{ url: 'http://a', sompi: 600, channel: 'chan-a' }, { url: 'http://b', sompi: 200, channel: 'chan-b' }],
   );
   assert.equal(s.totalPaidSompi, 800);
-  assert.equal(s.slash.length, 0);
+  assert.equal(s.faulted.length, 0);
   assert.equal(s.unsettleable.length, 0);
 });
 
@@ -37,14 +37,14 @@ test('an earner with no channel is reported unsettleable, not silently dropped',
   assert.equal(s.totalPaidSompi, 0);
 });
 
-test('a junk fount is flagged to slash, with its fault count', () => {
+test('a junk fount is flagged as a fault, with its fault count', () => {
   const r = receipt({ faults: [{ url: 'http://liar', index: 2 }, { url: 'http://liar', index: 5 }] });
   const s = settlementFor(r, { 'http://liar': 'chan-liar' });
-  assert.deepEqual(s.slash, [{ url: 'http://liar', faults: 2 }]);
+  assert.deepEqual(s.faulted, [{ url: 'http://liar', faults: 2 }]);
   assert.equal(s.pay.length, 0, 'it earned nothing, so it is paid nothing');
 });
 
-test('a mixed fount is BOTH paid for good parcels and slashed for junk', () => {
+test('a mixed fount is BOTH paid for good parcels and faulted for junk', () => {
   const r = receipt({
     perFount: { 'http://m': { parcels: 2, bytes: 200, sompi: 400 } },
     faults: [{ url: 'http://m', index: 9 }],
@@ -52,10 +52,10 @@ test('a mixed fount is BOTH paid for good parcels and slashed for junk', () => {
   });
   const s = settlementFor(r, { 'http://m': 'chan-m' });
   assert.deepEqual(s.pay, [{ url: 'http://m', sompi: 400, channel: 'chan-m' }]);
-  assert.deepEqual(s.slash, [{ url: 'http://m', faults: 1 }]);
+  assert.deepEqual(s.faulted, [{ url: 'http://m', faults: 1 }]);
 });
 
 test('an empty receipt settles to nothing', () => {
   const s = settlementFor(receipt({}), {});
-  assert.deepEqual(s, { pay: [], slash: [], unsettleable: [], totalPaidSompi: 0 });
+  assert.deepEqual(s, { pay: [], faulted: [], unsettleable: [], totalPaidSompi: 0 });
 });

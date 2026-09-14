@@ -26,6 +26,6 @@ export function printDemo(d: DemoResult): void {
   console.log(`    total: ${d.totalPaidSompi.toLocaleString()} sompi (${kas(d.totalPaidSompi)} KAS)`);
   console.log('\n  SETTLEMENT ON THE RAIL  (one voucher per fount; the liar is slashed, not paid)');
   for (const p of d.settlement.pay) console.log(`    PAY    ${pad(p.url, 12)} → ${p.channel}   ${p.sompi.toLocaleString()} sompi`);
-  for (const s of d.settlement.slash) console.log(`    SLASH  ${pad(s.url, 12)} (${s.faults} fault${s.faults === 1 ? '' : 's'})`);
+  for (const s of d.settlement.faulted) console.log(`    FAULT  ${pad(s.url, 12)} (${s.faults} fault${s.faults === 1 ? '' : 's'}) -- earns nothing`);
   console.log('');
 }

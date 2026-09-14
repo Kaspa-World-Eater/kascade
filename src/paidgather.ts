@@ -14,6 +14,7 @@ import type { Voucher, ChannelRef } from 'metered-protocol';
 import type { Manifest } from './manifest.js';
 import type { Holder } from './tracker.js';
 import { paidPull } from './paidpull.js';
+import { assemble } from './assemble.js';
 
 export interface PaidGatherOptions {
   manifest: Manifest;
@@ -63,11 +64,6 @@ export async function gatherPaid(opts: PaidGatherOptions): Promise<PaidGatherRes
     perFount[url] = { parcels: pulled.parcels.size, sompi: pulled.paidSompi, voucher: pulled.voucher };
   }));
 
-  const complete = got.size === manifest.parcels.length;
-  const bytes = new Uint8Array(complete ? manifest.size : [...got.values()].reduce((n, b) => n + b.length, 0));
-  if (complete) {
-    let at = 0;
-    for (const p of manifest.parcels) { bytes.set(got.get(p.index) as Uint8Array, at); at += p.size; }
-  }
+  const { bytes, complete } = assemble(manifest, got);
   return { bytes, complete, perFount };
 }

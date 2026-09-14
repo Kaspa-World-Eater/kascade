@@ -16,6 +16,7 @@
  * arrived and verified, and nothing else.
  */
 import { verifyParcel, type Manifest } from './manifest.js';
+import { assemble } from './assemble.js';
 import type { Holder } from './tracker.js';
 
 export interface FountTally { parcels: number; bytes: number; sompi: number }
@@ -105,11 +106,7 @@ export async function fetchFile(opts: FetchOptions): Promise<{ bytes: Uint8Array
   const n = Math.max(1, Math.min(opts.concurrency ?? 4, queue.length || 1));
   await Promise.all(Array.from({ length: n }, () => worker()));
 
-  receipt.complete = got.size === manifest.parcels.length;
-  const bytes = new Uint8Array(receipt.complete ? manifest.size : receipt.bytesGot);
-  if (receipt.complete) {
-    let at = 0;
-    for (const c of manifest.parcels) { bytes.set(got.get(c.index) as Uint8Array, at); at += c.size; }
-  }
+  const { bytes, complete } = assemble(manifest, got);
+  receipt.complete = complete;
   return { bytes, receipt };
 }

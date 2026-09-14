@@ -47,11 +47,11 @@ Built test-first. Each file is small and single-purpose.
 | `src/fount.ts` | one node: holds a subset of parcels, serves them by the byte |
 | `src/tracker.ts` | discovery: who holds which parcels (a central tracker — BitTorrent's honest v1) |
 | `src/consumer.ts` | the Meridian: parallel pull, per-parcel verify, per-fount pay, reroute, stop |
-| `src/settlement.ts` | a receipt → money on the rail: pay each earner on its channel, flag junk to slash |
+| `src/settlement.ts` | a receipt → money on the rail: pay each earner on its channel; junk earns nothing (fault recorded) |
 
 ```bash
 npm install
-npm test          # 10 tests, incl. "a file reassembles byte-for-byte from three founts at once"
+npm test          # 60 tests, incl. "a file reassembles byte-for-byte from three founts at once"
 ```
 
 ## See it work
@@ -65,7 +65,7 @@ npm run kascade demo    # a whole Meridian, live, in one process -- nothing mock
 it back through the same fount/tracker/consumer/settlement code a deployed node would run. You watch
 the liar get **tried first, rejected by the manifest, and routed around**; the file come back
 **byte-identical**; and each fount paid only for the parcels it actually served -- the liar earning
-nothing and getting slashed. It is pinned by a test, so it cannot quietly break.
+nothing (a recorded fault -- seizing a bond on-chain is designed in quorum, not built). It is pinned by a test, so it cannot quietly break.
 
 **The money is proven on chain, too.** `npx tsx tools/prove-live.ts` runs it live on Kaspa
 testnet-10: a fount starts at 0 KAS, delivers a real file, and **claims real testnet KAS** for exactly
