@@ -5,6 +5,9 @@
  *   kascade tracker [--port N]                run a tracker: who holds which parcels
  *   kascade fount <dir> --tracker <url> [--price N] [--port N]   serve a directory of files
  *   kascade get <trackerUrl> <fileId> [--out FILE] [--price N]   gather a file from the Meridian
+ *   kascade wallet [--role gatherer|fount]    your address and on-chain balance
+ *   kascade fund [--role ...] [--min KAS]     print the address to fund, then wait for it to arrive
+ *   kascade app [--port N]                    a local browser control panel for all of the above
  */
 import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -18,6 +21,9 @@ import { channels as openChannels } from '../src/channel.js';
 import type { Network } from 'metered-protocol/rail';
 import { paidFountOptions, openChannelWith, getPaid, claimStored, ensureChannels, refundChannel } from '../src/paidcli.js';
 import { seed } from '../src/seed.js';
+import { walletState, awaitFunds, faucetFor } from '../src/wallet.js';
+import type { Role } from '../src/keys.js';
+import { webapp } from '../src/webapp.js';
 
 const argv = process.argv.slice(2);
 const [command, ...rest] = argv;
@@ -158,7 +164,51 @@ async function publish(): Promise<void> {
   process.exit(0);
 }
 
-const COMMANDS: Record<string, () => Promise<void>> = { demo, tracker, fount: serveFount, get, publish, channel, channels: channelsList, claim: claimCmd, refund: refundCmd };
+async function walletCmd(): Promise<void> {
+  const role = flag('role', 'gatherer') as Role;
+  const w = await walletState(role, NET);
+  console.log(`
+  ${role} wallet`);
+  console.log(`  key      ${w.file}`);
+  console.log(`  address  ${w.address}`);
+  console.log(`  balance  ${kas(w.balanceSompi)} KAS  (${w.utxos} utxo${w.utxos === 1 ? '' : 's'})`);
+  const f = faucetFor(NET);
+  if (w.balanceSompi === 0n && f) console.log(`  empty — fund it: ${f}`);
+  console.log('');
+  process.exit(0);
+}
+
+async function fundCmd(): Promise<void> {
+  const role = flag('role', 'gatherer') as Role;
+  const min = BigInt(Math.round(Number(flag('min', '0.5')) * 1e8));
+  const w0 = await walletState(role, NET);
+  console.log(`
+  fund the ${role}:
+
+    ${w0.address}
+`);
+  const f = faucetFor(NET);
+  if (f) console.log(`  testnet faucet: ${f}
+`);
+  if (w0.balanceSompi >= min) { console.log(`  already funded: ${kas(w0.balanceSompi)} KAS
+`); process.exit(0); }
+  console.log(`  waiting for at least ${kas(min)} KAS to arrive (Ctrl+C to stop)…`);
+  const w = await awaitFunds(role, NET, min);
+  console.log(`  funded: ${kas(w.balanceSompi)} KAS
+`);
+  process.exit(0);
+}
+
+async function appCmd(): Promise<void> {
+  const a = webapp(NET);
+  await new Promise<void>((r) => a.server.listen(num('port', 4173), '127.0.0.1', r));
+  console.log(`
+  kascade app on http://127.0.0.1:${port(a.server)}   (Ctrl+C to stop)`);
+  console.log(`  buyer/operator panel on ${NET}. The passive phone app is not built.
+`);
+}
+
+const COMMANDS: Record<string, () => Promise<void>> = { demo, tracker, fount: serveFount, get, publish, channel, channels: channelsList, claim: claimCmd, refund: refundCmd, wallet: walletCmd, fund: fundCmd, app: appCmd };
 const run = COMMANDS[command ?? ''];
-if (!run) { console.error('kascade: demo | tracker | fount [--paid] [--accept MB] | publish <file> --to <urls> | get [--pay] | channel open | channels | claim | refund'); process.exit(1); }
+if (!run) { console.error('kascade: demo | tracker | fount [--paid] | publish <file> --to <urls> | get [--pay] | wallet | fund | app | channel open | channels | claim | refund'); process.exit(1); }
 run().catch((e: unknown) => { console.error(`\n  ${e instanceof Error ? e.message : String(e)}\n`); process.exit(1); });

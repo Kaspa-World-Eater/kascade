@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>kascade</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #ffffff; --ink: #14181f; --dim: #5b6472;
+    --line: #e4e7ec; --accent: #0aa5a0; --accent-ink: #063f3d; --warn: #8a5a00; --warn-bg: #fff6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1116; --card: #171b22; --ink: #e6e9ee; --dim: #99a2b0;
+      --line: #262c36; --accent: #2fd4cd; --accent-ink: #bff4f1; --warn: #e8b24a; --warn-bg: #2a2312;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 28px 18px 60px; }
+  h1 { margin: 0; font-size: 26px; letter-spacing: -0.02em; }
+  .tag { color: var(--dim); font-size: 13px; margin: 2px 0 20px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 16px 18px; margin: 14px 0; }
+  .card h2 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--dim); }
+  .kv { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; }
+  .kv span:first-child { color: var(--dim); }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; word-break: break-all; }
+  .bal { font-size: 28px; font-weight: 650; letter-spacing: -0.02em; }
+  button { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--ink);
+    border-radius: 8px; padding: 7px 13px; cursor: pointer; }
+  button.go { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 600; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  input { font: inherit; width: 100%; padding: 8px 10px; border: 1px solid var(--line);
+    border-radius: 8px; background: var(--bg); color: var(--ink); }
+  label { display: block; font-size: 12px; color: var(--dim); margin: 10px 0 4px; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .note { background: var(--warn-bg); color: var(--warn); border-radius: 10px; padding: 12px 14px;
+    font-size: 13px; margin: 14px 0; }
+  .chan { font-size: 13px; padding: 6px 0; border-top: 1px solid var(--line); }
+  .out { font-size: 13px; color: var(--dim); min-height: 18px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>kascade</h1>
+  <p class="tag">local control panel — your machine, your keys, the live network</p>
+
+  <div class="note">
+    This is the buyer/operator panel. The passive, phone-to-phone “download in the background”
+    app is <strong>not built</strong> — that needs WebRTC/NAT traversal we haven’t proven yet.
+    Everything on this page drives the same code the CLI does.
+  </div>
+
+  <div class="card">
+    <h2>Wallet <span style="text-transform:none;letter-spacing:0" id="net"></span></h2>
+    <div class="bal"><span id="bal">…</span> KAS</div>
+    <div class="kv"><span>address</span></div>
+    <div class="row"><span class="mono" id="addr">loading…</span><button id="copy">copy</button></div>
+    <div class="kv"><span>utxos</span><span id="utxos">–</span></div>
+    <div class="row" style="margin-top:10px"><button id="refresh">refresh</button>
+      <a id="faucet" href="#" target="_blank" rel="noopener" hidden><button>get testnet KAS →</button></a></div>
+  </div>
+
+  <div class="card">
+    <h2>Open channels</h2>
+    <div id="chans">…</div>
+    <label>fount url</label><input id="fount" placeholder="http://127.0.0.1:PORT" />
+    <label>escrow (KAS)</label><input id="escrow" value="0.5" />
+    <div class="row" style="margin-top:10px"><button class="go" id="open">open channel</button></div>
+    <div class="out" id="openOut"></div>
+  </div>
+
+  <div class="card">
+    <h2>Gather a file</h2>
+    <label>tracker url</label><input id="tracker" placeholder="http://127.0.0.1:PORT" />
+    <label>file id</label><input id="file" placeholder="content hash" />
+    <div class="row" style="margin-top:10px"><button class="go" id="gather">gather &amp; pay</button></div>
+    <div class="out" id="gatherOut"></div>
+  </div>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const kas = (sompi) => (Number(sompi) / 1e8).toFixed(8);
+  const post = (path, body) => fetch(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then((r) => r.json());
+
+  async function loadWallet() {
+    const w = await fetch('/api/wallet').then((r) => r.json());
+    $('bal').textContent = kas(w.balanceSompi);
+    $('addr').textContent = w.address;
+    $('utxos').textContent = w.utxos;
+    $('net').textContent = '· ' + (w.network || '');
+    if (w.faucet && w.balanceSompi === '0') { $('faucet').hidden = false; $('faucet').href = w.faucet; }
+    else $('faucet').hidden = true;
+  }
+  async function loadChans() {
+    const cs = await fetch('/api/channels').then((r) => r.json());
+    $('chans').innerHTML = cs.length
+      ? cs.map((c) => `<div class="chan"><span class="mono">${c.covenantId.slice(0, 20)}…</span> — ${kas(c.leftSompi)} KAS left</div>`).join('')
+      : '<div class="chan" style="color:var(--dim)">none yet — open one below</div>';
+  }
+  $('copy').onclick = () => navigator.clipboard.writeText($('addr').textContent);
+  $('refresh').onclick = loadWallet;
+  $('open').onclick = async () => {
+    $('openOut').textContent = 'opening…';
+    try {
+      const r = await post('/api/channel', { fountUrl: $('fount').value, escrowSompi: Math.round(Number($('escrow').value) * 1e8) });
+      $('openOut').textContent = r.error ? 'error: ' + r.error : 'opened ' + r.covenantId.slice(0, 24) + '…';
+      loadChans(); loadWallet();
+    } catch (e) { $('openOut').textContent = 'error: ' + e.message; }
+  };
+  $('gather').onclick = async () => {
+    $('gatherOut').textContent = 'gathering…';
+    try {
+      const r = await post('/api/gather', { trackerUrl: $('tracker').value, fileId: $('file').value });
+      $('gatherOut').textContent = r.error ? 'error: ' + r.error : (r.complete ? 'complete' : 'incomplete') + ' — ' + r.founts + ' fount(s), file written server-side';
+      loadWallet();
+    } catch (e) { $('gatherOut').textContent = 'error: ' + e.message; }
+  };
+  loadWallet(); loadChans();
+</script>
+</body>
+</html>

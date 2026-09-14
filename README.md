@@ -82,6 +82,32 @@ accumulates earnings and settles in meaningful amounts, the way a Lightning chan
 The real commands are there too: `kascade tracker`, `kascade fount <dir> --tracker <url>`, and
 `kascade get <trackerUrl> <fileId>` run founts and gatherers as separate processes.
 
+## Onboarding a buyer
+
+There is no sign-up and no seed phrase to write down. The first time you run any role, kascade
+creates a secp256k1 key at `~/.kascade/<role>.key` (mode 0600) — **that key is the wallet.** To find
+out where to put money and whether it has arrived:
+
+```
+kascade wallet          # your address and live on-chain balance
+kascade fund            # prints the address, then waits until funded (testnet faucet linked)
+```
+
+Funding itself is manual — kascade never takes custody and there is no fiat on-ramp. On testnet the
+faucet fills the address in seconds; then `kascade channel open <fountUrl>` locks escrow and paid
+`get`s draw against it.
+
+## The app
+
+`kascade app` serves a **local browser control panel** on `127.0.0.1`: your wallet and balance, your
+open channels, and buttons to open a channel or gather a file — the same code the CLI runs, behind a
+page. It is the buyer/operator's face, run on your own machine with your own keys.
+
+It is **not** the passive, phone-to-phone "download in the background" app the project is aiming at.
+That one needs WebRTC/NAT traversal that is not built (see the honest hard parts below), and the page
+says so. What ships today is real and works against the live network; the passive mobile app does not
+exist yet.
+
 ## Status
 
 The Meridian runs end to end in-process: a file reassembles byte-identical from three founts pulled at
