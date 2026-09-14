@@ -29,7 +29,7 @@ function proposedFount() {
   // verifyChannel stands in for the on-chain channelVerifier; here it accepts and echoes the id.
   const f = fount({
     held, priceSompi: 1, payoutPubkey: payout,
-    verifyChannel: async (p) => ({ channel: { network: NET, covenantId: p.covenantId }, buyerPubkey: buyerPk }),
+    verifyChannel: async (p, bpk) => ({ channel: { network: NET, covenantId: p.covenantId }, buyerPubkey: bpk }),
   });
   return { f, fileId: m.fileId, m };
 }
@@ -53,7 +53,7 @@ test('paid delivery is refused until the channel is proposed, then it works', as
       () => paidPull({ fountUrl: url, manifest: m, indices: [0, 1], channel, buyerSk, priceSompi: 1 }),
       /402/, 'no credit before the channel is accepted',
     );
-    const res = await fetch(`${url}/cascade/propose`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ covenantId: COV }) });
+    const res = await fetch(`${url}/cascade/propose`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ proposal: { covenantId: COV }, buyerPubkey: buyerPk }) });
     assert.equal(res.status, 200, 'the fount accepts the proposal');
     const out = await paidPull({ fountUrl: url, manifest: m, indices: [0, 1], channel, buyerSk, priceSompi: 1 });
     assert.equal(out.parcels.size, 2, 'now it serves, paid per parcel');

@@ -9,18 +9,23 @@
 import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { AddressInfo } from 'node:net';
-import { fount, type Held } from '../src/fount.js';
+import { fount, type FountOptions } from '../src/fount.js';
 import { trackerServer, announceTo, discover } from '../src/tracker.js';
 import { fetchFile } from '../src/consumer.js';
 import { runDemo, type DemoResult } from '../src/demo.js';
 import { stock } from '../src/stock.js';
+import { channels as openChannels } from '../src/channel.js';
+import type { Network } from 'metered-protocol/rail';
+import { paidFountOptions, openChannelWith, getPaid, claimStored } from '../src/paidcli.js';
 
 const argv = process.argv.slice(2);
 const [command, ...rest] = argv;
 const flag = (name: string, fb: string): string => { const i = argv.indexOf(`--${name}`); return i === -1 ? fb : argv[i + 1] ?? fb; };
+const has = (name: string): boolean => argv.includes(`--${name}`);
 const num = (name: string, fb: number): number => Number(flag(name, String(fb)));
 const positional = rest.filter((a, i) => !a.startsWith('--') && !(rest[i - 1] ?? '').startsWith('--'));
-const kas = (sompi: number): string => (sompi / 1e8).toFixed(8);
+const NET = flag('network', 'testnet-10') as Network;
+const kas = (sompi: number | bigint): string => (Number(sompi) / 1e8).toFixed(8);
 const pad = (s: string, n: number): string => (s.length >= n ? s : s + ' '.repeat(n - s.length));
 const port = (s: { address: () => unknown }): number => (s.address() as AddressInfo).port;
 
@@ -63,34 +68,68 @@ async function serveFount(): Promise<void> {
   const root = resolve(dir);
   const names = readdirSync(root).filter((f) => { const s = statSync(join(root, f)); return s.isFile() && s.size > 0; });
   const files = names.map((name) => ({ name, bytes: new Uint8Array(readFileSync(join(root, name))) }));
-  const capMB = num('cap', 1024); // --cap in MB, default 1 GB; the fount never holds more
-  const { held, cache } = stock(files, capMB * 1024 * 1024, num('parcel', 64 * 1024));
-  const f = fount({ held, priceSompi: num('price', 2) });
+  const capBytes = num('cap', 1024) * 1024 * 1024; // --cap in MB, default 1 GB; the fount never holds more
+  const price = num('price', 2);
+  const options: FountOptions = has('paid')
+    ? paidFountOptions(files, NET, price, capBytes)
+    : { held: stock(files, capBytes, num('parcel', 64 * 1024)).held, priceSompi: price };
+  const f = fount(options);
   await new Promise<void>((r) => f.server.listen(num('port', 0), '127.0.0.1', r));
   const url = `http://127.0.0.1:${port(f.server)}`;
-  for (const h of held) await announceTo(trackerUrl, h.manifest.fileId, url, [...h.parcels.keys()]);
-  console.log(`\n  fount on ${url}  —  serving ${held.length} file(s), ${num('price', 2)} sompi/byte`);
-  for (const h of held) console.log(`    ${h.manifest.fileId.slice(0, 16)}…  ${h.manifest.name}  (${h.parcels.size}/${h.manifest.parcels.length} parcels held)`);
-  console.log(`  holding ${(cache.usedBytes() / 1048576).toFixed(1)} MB of a ${capMB} MB budget\n`);
+  for (const h of options.held) await announceTo(trackerUrl, h.manifest.fileId, url, [...h.parcels.keys()]);
+  console.log(`\n  fount on ${url}  —  ${options.held.length} file(s) at ${price} sompi/byte${has('paid') ? ', PAID (a channel is required)' : ' (free)'}`);
+  for (const h of options.held) console.log(`    ${h.manifest.fileId.slice(0, 16)}…  ${h.manifest.name}  (${h.parcels.size}/${h.manifest.parcels.length} parcels)`);
+  console.log('');
 }
 
 async function get(): Promise<void> {
   const [trackerUrl, fileId] = positional;
-  if (!trackerUrl || !fileId) { console.error('usage: cascade get <trackerUrl> <fileId> [--out FILE]'); process.exit(1); }
+  if (!trackerUrl || !fileId) { console.error('usage: cascade get <trackerUrl> <fileId> [--out FILE] [--pay]'); process.exit(1); }
+  if (has('pay')) {
+    const res = await getPaid(trackerUrl, fileId, NET, num('price', 2));
+    if (res.complete) writeFileSync(flag('out', 'download.bin'), res.bytes);
+    const paid = Object.values(res.perFount).reduce((n, p) => n + p.sompi, 0);
+    console.log(`\n  paid gather ${res.complete ? 'complete' : 'INCOMPLETE'} across ${Object.keys(res.perFount).length} fount(s)`);
+    console.log(`  paid ${paid.toLocaleString()} sompi (${kas(paid)} KAS), per parcel, over your open channels\n`);
+    process.exit(0);
+  }
   const holders = await discover(trackerUrl, fileId);
   const anyUrl = holders[0]?.url;
   if (!anyUrl) { console.error('no founts hold that file'); process.exit(1); }
   const manifest = await (await fetch(`${anyUrl}/cascade/manifest?file=${fileId}`)).json();
   const { bytes, receipt } = await fetchFile({ manifest, holders, priceSompi: num('price', 2), concurrency: 4 });
-  const out = flag('out', manifest.name);
-  if (receipt.complete) writeFileSync(out, bytes);
-  console.log(`\n  gathered ${receipt.parcelsGot}/${manifest.parcels.length} parcels from ${Object.keys(receipt.perFount).length} fount(s)`);
-  console.log(`  ${receipt.complete ? `wrote ${out}` : 'INCOMPLETE — some parcels had no honest holder'}`);
-  console.log(`  owed ${receipt.totalSompi.toLocaleString()} sompi across the founts that served\n`);
+  if (receipt.complete) writeFileSync(flag('out', manifest.name), bytes);
+  console.log(`\n  gathered ${receipt.parcelsGot}/${manifest.parcels.length} parcels; ${receipt.complete ? 'wrote it' : 'INCOMPLETE'}; owed ${receipt.totalSompi.toLocaleString()} sompi\n`);
   process.exit(0);
 }
 
-const COMMANDS: Record<string, () => Promise<void>> = { demo, tracker, fount: serveFount, get };
+async function channel(): Promise<void> {
+  if (positional[0] !== 'open' || !positional[1]) { console.error('usage: cascade channel open <fountUrl> [--escrow KAS]'); process.exit(1); }
+  const escrow = BigInt(Math.round(Number(flag('escrow', '0.5')) * 1e8));
+  console.log(`\n  opening a ${kas(escrow)} KAS channel with ${positional[1]}…`);
+  const { covenantId, genesisTxid } = await openChannelWith(positional[1], NET, escrow, BigInt(num('window', 3600)));
+  console.log(`  genesis    ${genesisTxid}\n  covenantId ${covenantId}\n  now: cascade get <tracker> <fileId> --pay\n`);
+  process.exit(0);
+}
+
+async function channelsList(): Promise<void> {
+  const rows = openChannels();
+  if (rows.length === 0) { console.log('\n  no channels. Open one: cascade channel open <fountUrl>\n'); process.exit(0); }
+  console.log('');
+  for (const r of rows) console.log(`    ${r.channel.covenantId}   ${kas(r.channel.active.amount)} KAS left   with ${r.sellerPubkey.slice(0, 16)}…`);
+  console.log('');
+  process.exit(0);
+}
+
+async function claimCmd(): Promise<void> {
+  const cov = positional[0];
+  if (!cov) { console.error('usage: cascade claim <covenantId>'); process.exit(1); }
+  const out = await claimStored(cov);
+  console.log(`\n  claimed ${kas(out.paid)} KAS  (${out.txid})\n`);
+  process.exit(0);
+}
+
+const COMMANDS: Record<string, () => Promise<void>> = { demo, tracker, fount: serveFount, get, channel, channels: channelsList, claim: claimCmd };
 const run = COMMANDS[command ?? ''];
-if (!run) { console.error('cascade: demo | tracker | fount | get'); process.exit(1); }
+if (!run) { console.error('cascade: demo | tracker | fount [--paid] | get [--pay] | channel open | channels | claim'); process.exit(1); }
 run().catch((e: unknown) => { console.error(`\n  ${e instanceof Error ? e.message : String(e)}\n`); process.exit(1); });

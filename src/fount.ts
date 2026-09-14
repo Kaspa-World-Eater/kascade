@@ -41,10 +41,13 @@ export interface FountOptions {
   /** This fount's payout public key, advertised at /cascade/identity so a gatherer knows who to open
    *  a channel with. */
   payoutPubkey?: string;
-  /** Verify a channel a gatherer PROPOSES before extending it credit -- the on-chain channelVerifier
-   *  in production. Returns the context to bill against, or null to refuse. When set, /cascade/propose
-   *  is live and paid delivery is driven by accepted proposals. */
-  verifyChannel?: (proposal: ChannelProposal) => Promise<CreditContext | null>;
+  /** Verify a channel a gatherer PROPOSES (with its pubkey) before extending it credit -- the on-chain
+   *  channelVerifier in production. Returns the context to bill against, or null to refuse. When set,
+   *  /cascade/propose is live and paid delivery is driven by accepted proposals. */
+  verifyChannel?: (proposal: ChannelProposal, buyerPubkey: string) => Promise<CreditContext | null>;
+  /** Called whenever a voucher is accepted -- how a long-running fount persists what it can later
+   *  claim. The latest (highest) voucher per channel is the one to keep. */
+  onVoucher?: (covenantId: string, voucher: Voucher) => void;
 }
 
 export interface CreditContext {
@@ -55,15 +58,18 @@ export interface CreditContext {
 type Gate = { ok: true; charge: (sompi: number) => void } | { ok: false; error: string };
 
 /** Decide whether a fount may serve one more parcel on this channel, recording any voucher sent. */
-function creditGate(paid: boolean, resolve: (covenantId: string) => CreditContext | null, lines: Map<string, Creditline>, covenantId: string, voucherHeader?: string): Gate {
+function creditGate(opts: FountOptions, paid: boolean, resolve: (covenantId: string) => CreditContext | null, lines: Map<string, Creditline>, covenantId: string, voucherHeader?: string): Gate {
   if (!paid) return { ok: true, charge: () => undefined };
   const ctx = resolve(covenantId);
   if (!ctx) return { ok: false, error: 'this fount does not accept that channel' };
   let line = lines.get(covenantId);
   if (!line) { line = new Creditline(ctx.channel, ctx.buyerPubkey); lines.set(covenantId, line); }
   if (voucherHeader) {
-    try { line.recordVoucher(JSON.parse(voucherHeader) as Voucher); }
-    catch { return { ok: false, error: 'voucher rejected' }; }
+    try {
+      const v = JSON.parse(voucherHeader) as Voucher;
+      line.recordVoucher(v);
+      opts.onVoucher?.(covenantId, v);
+    } catch { return { ok: false, error: 'voucher rejected' }; }
   }
   if (!line.mayServe()) return { ok: false, error: 'a voucher for the parcels already delivered is required first' };
   const l = line;
@@ -114,8 +120,8 @@ export function fount(opts: FountOptions): { server: Server; url: () => string; 
       if (!opts.verifyChannel) return json(res, 404, { error: 'this fount does not take channel proposals' });
       const verify = opts.verifyChannel;
       void readBody(req).then(async (body) => {
-        const proposal = body as ChannelProposal;
-        const ctx = await verify(proposal);
+        const { proposal, buyerPubkey } = body as { proposal: ChannelProposal; buyerPubkey: string };
+        const ctx = await verify(proposal, buyerPubkey);
         if (!ctx) return json(res, 402, { error: 'channel not accepted' });
         proposals.set(proposal.covenantId, ctx);
         json(res, 200, { ok: true });
@@ -125,7 +131,7 @@ export function fount(opts: FountOptions): { server: Server; url: () => string; 
     if (u.pathname === '/cascade/voucher') {
       // record a voucher without serving -- how a gatherer pays for the LAST parcel it pulled.
       const vh = req.headers['x-voucher'];
-      const g = creditGate(paid, resolveCredit, lines, u.searchParams.get('channel') ?? '', typeof vh === 'string' ? vh : undefined);
+      const g = creditGate(opts, paid, resolveCredit, lines, u.searchParams.get('channel') ?? '', typeof vh === 'string' ? vh : undefined);
       return json(res, g.ok ? 200 : 402, g.ok ? { ok: true } : { error: g.error });
     }
     const held = byId.get(u.searchParams.get('file') ?? '');
@@ -136,7 +142,7 @@ export function fount(opts: FountOptions): { server: Server; url: () => string; 
       const bytes = held.parcels.get(index);
       if (!bytes) return json(res, 404, { error: `parcel ${index} not held here` });
       const vh = req.headers['x-voucher'];
-      const gate = creditGate(paid, resolveCredit, lines, u.searchParams.get('channel') ?? '', typeof vh === 'string' ? vh : undefined);
+      const gate = creditGate(opts, paid, resolveCredit, lines, u.searchParams.get('channel') ?? '', typeof vh === 'string' ? vh : undefined);
       if (!gate.ok) return json(res, 402, { error: gate.error });
       const out = opts.tamper ? opts.tamper(bytes, held.manifest.fileId, index) : bytes;
       res.writeHead(200, {
