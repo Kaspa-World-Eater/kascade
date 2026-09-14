@@ -1,7 +1,7 @@
 /**
  * The per-parcel 402 rule, pinned FIRST (test-driven): a fount extends at most ONE parcel of credit,
  * then refuses to serve more until the gatherer has signed a voucher covering what it already got.
- * This is what makes Cascade trustless PER PARCEL rather than only at the final settlement — a fount
+ * This is what makes Kascade trustless PER PARCEL rather than only at the final settlement — a fount
  * can lose at most one parcel to a gatherer that stops paying, and a gatherer signs only for parcels
  * it has already received and verified. Uses metered's REAL voucher crypto, no mocks.
  */

@@ -1,5 +1,5 @@
 /**
- * What cascade promises, pinned:
+ * What kascade promises, pinned:
  *   - a file reassembles BYTE-IDENTICAL from several founts pulled at once;
  *   - each fount is paid for exactly the parcels IT served, and the parts sum to the whole price;
  *   - a fount that serves JUNK is caught against the manifest, paid nothing for it, and routed

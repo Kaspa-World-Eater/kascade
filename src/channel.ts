@@ -1,5 +1,5 @@
 /**
- * cascade's money, on the kaspa-x402 rail.
+ * kascade's money, on the kaspa-x402 rail.
  *
  * A BUYER opens a channel with a seller once, buys any number of files against it, and takes the
  * remainder back after the timeout. A SELLER verifies a proposed channel before billing against it
@@ -22,7 +22,7 @@ import {
 } from 'metered-protocol/rail';
 import type { Voucher } from 'metered-protocol';
 
-const HOME = join(homedir(), '.cascade', 'channels');
+const HOME = join(homedir(), '.kascade', 'channels');
 const CARVE_FEE = 250_000n;
 export const GENESIS_FEE = 500_000n;
 export const CLAIM_FEE = 500_000n;

@@ -39,18 +39,18 @@ export interface FountOptions {
    * the in-process/demo path. When present it extends at most one parcel of credit per channel.
    */
   credit?: (covenantId: string) => CreditContext | null;
-  /** This fount's payout public key, advertised at /cascade/identity so a gatherer knows who to open
+  /** This fount's payout public key, advertised at /kascade/identity so a gatherer knows who to open
    *  a channel with. */
   payoutPubkey?: string;
   /** Verify a channel a gatherer PROPOSES (with its pubkey) before extending it credit -- the on-chain
    *  channelVerifier in production. Returns the context to bill against, or null to refuse. When set,
-   *  /cascade/propose is live and paid delivery is driven by accepted proposals. */
+   *  /kascade/propose is live and paid delivery is driven by accepted proposals. */
   verifyChannel?: (proposal: ChannelProposal, buyerPubkey: string) => Promise<CreditContext | null>;
   /** Called whenever a voucher is accepted -- how a long-running fount persists what it can later
    *  claim. The latest (highest) voucher per channel is the one to keep. */
   onVoucher?: (covenantId: string, voucher: Voucher) => void;
   /** Opt in to accepting content PUSHED to this fount (a publisher seeding it), up to this many
-   *  bytes. Absent, /cascade/store is off and the fount serves only what it was given. */
+   *  bytes. Absent, /kascade/store is off and the fount serves only what it was given. */
   acceptBytes?: number;
 }
 
@@ -129,9 +129,9 @@ export function fount(opts: FountOptions): { server: Server; url: () => string; 
 
   const server = createServer((req: IncomingMessage, res: ServerResponse) => {
     const u = new URL(req.url ?? '/', 'http://x');
-    if (u.pathname === '/cascade/have') return json(res, 200, summary());
-    if (u.pathname === '/cascade/identity') return json(res, 200, { payoutPubkey: opts.payoutPubkey ?? null });
-    if (u.pathname === '/cascade/propose') {
+    if (u.pathname === '/kascade/have') return json(res, 200, summary());
+    if (u.pathname === '/kascade/identity') return json(res, 200, { payoutPubkey: opts.payoutPubkey ?? null });
+    if (u.pathname === '/kascade/propose') {
       if (!opts.verifyChannel) return json(res, 404, { error: 'this fount does not take channel proposals' });
       const verify = opts.verifyChannel;
       void readBody(req).then(async (body) => {
@@ -143,13 +143,13 @@ export function fount(opts: FountOptions): { server: Server; url: () => string; 
       }).catch(() => json(res, 400, { error: 'bad proposal' }));
       return;
     }
-    if (u.pathname === '/cascade/voucher') {
+    if (u.pathname === '/kascade/voucher') {
       // record a voucher without serving -- how a gatherer pays for the LAST parcel it pulled.
       const vh = req.headers['x-voucher'];
       const g = creditGate(opts, paid, resolveCredit, lines, u.searchParams.get('channel') ?? '', typeof vh === 'string' ? vh : undefined);
       return json(res, g.ok ? 200 : 402, g.ok ? { ok: true } : { error: g.error });
     }
-    if (u.pathname === '/cascade/store') {
+    if (u.pathname === '/kascade/store') {
       if (!store) return json(res, 404, { error: 'this fount does not accept pushed content' });
       void readBody(req).then((body) => {
         const { manifest, index, bytesB64 } = body as { manifest: Manifest; index: number; bytesB64: string };
@@ -163,8 +163,8 @@ export function fount(opts: FountOptions): { server: Server; url: () => string; 
     }
     const manifest = manifestOf(u.searchParams.get('file') ?? '');
     if (!manifest) return json(res, 404, { error: 'file not held here' });
-    if (u.pathname === '/cascade/manifest') return json(res, 200, manifest);
-    if (u.pathname === '/cascade/parcel') {
+    if (u.pathname === '/kascade/manifest') return json(res, 200, manifest);
+    if (u.pathname === '/kascade/parcel') {
       const index = Number(u.searchParams.get('i'));
       const bytes = parcelOf(manifest.fileId, index);
       if (!bytes) return json(res, 404, { error: `parcel ${index} not held here` });

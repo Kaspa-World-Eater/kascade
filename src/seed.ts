@@ -18,7 +18,7 @@ export async function seed(filePath: string, fountUrls: string[], trackerUrl?: s
   for (const url of fountUrls) {
     for (const p of manifest.parcels) {
       const bytesB64 = Buffer.from(bytes.subarray(p.index * manifest.parcelSize, p.index * manifest.parcelSize + p.size)).toString('base64');
-      const res = await fetch(`${url}/cascade/store`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ manifest, index: p.index, bytesB64 }) });
+      const res = await fetch(`${url}/kascade/store`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ manifest, index: p.index, bytesB64 }) });
       if (!res.ok) throw new Error(`${url} rejected parcel ${p.index}: ${res.status} ${await res.text()}`);
     }
     if (trackerUrl) await announceTo(trackerUrl, manifest.fileId, url, manifest.parcels.map((p) => p.index));

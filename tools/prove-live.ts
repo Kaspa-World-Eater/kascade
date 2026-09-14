@@ -4,7 +4,7 @@
  * Nothing here is simulated. A gatherer opens a real kaspa-x402 channel with a fount, pulls a real
  * file over HTTP, verifies every parcel against the manifest, signs a voucher for exactly what the
  * fount delivered, and the fount CLAIMS it on chain. The reward is a transaction id and a balance
- * that went up. This is Cascade's delivery feeding the same rail spigot and flume proved.
+ * that went up. This is Kascade's delivery feeding the same rail spigot and flume proved.
  *
  * Multi-fount is this, once per fount -- the gatherer holds one channel per fount it pulls from.
  */
@@ -40,7 +40,7 @@ async function main(): Promise<void> {
   const all = new Map(m.parcels.map((b) => [b.index, bytes.subarray(b.index * m.parcelSize, b.index * m.parcelSize + b.size)]));
   const owed = bytes.length * PRICE; // what the fount will have earned, in sompi
 
-  console.log(`\n  CASCADE — money proof, live on Kaspa ${NETWORK}\n`);
+  console.log(`\n  KASCADE — money proof, live on Kaspa ${NETWORK}\n`);
   console.log(`  gatherer ${gatherer.publicKeyHex.slice(0, 16)}…   fount ${fountId.publicKeyHex.slice(0, 16)}…`);
   const before = await balance(fountId.secretKeyHex);
   console.log(`  fount balance before: ${kas(before)} KAS\n`);
@@ -82,7 +82,7 @@ async function main(): Promise<void> {
 
   const after = await balance(fountId.secretKeyHex);
   console.log(`\n  fount balance after:  ${kas(after)} KAS   (+${kas(after - before)} KAS)`);
-  console.log(`\n  PROVEN: a Cascade fount delivered a file and earned real testnet KAS for it.\n`);
+  console.log(`\n  PROVEN: a Kascade fount delivered a file and earned real testnet KAS for it.\n`);
 }
 
 main().catch((e: unknown) => { console.error(`\n  ${e instanceof Error ? e.message : String(e)}\n`); process.exit(1); });

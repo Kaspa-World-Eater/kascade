@@ -47,7 +47,7 @@ function holdersByIndex(holders: Holder[]): Map<number, string[]> {
 }
 
 async function fetchParcel(url: string, fileId: string, index: number): Promise<Uint8Array> {
-  const res = await fetch(`${url}/cascade/parcel?file=${encodeURIComponent(fileId)}&i=${index}`);
+  const res = await fetch(`${url}/kascade/parcel?file=${encodeURIComponent(fileId)}&i=${index}`);
   if (!res.ok) throw new Error(`parcel ${index} from ${url}: ${res.status}`);
   return new Uint8Array(await res.arrayBuffer());
 }

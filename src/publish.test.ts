@@ -16,7 +16,7 @@ const listen = (s: Server) => new Promise<void>((r) => s.listen(0, '127.0.0.1', 
 const close = (s: Server) => new Promise<void>((r) => s.close(() => r()));
 
 async function push(url: string, manifest: ReturnType<typeof buildManifest>, index: number, bytes: Uint8Array): Promise<number> {
-  const res = await fetch(`${url}/cascade/store`, {
+  const res = await fetch(`${url}/kascade/store`, {
     method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ manifest, index, bytesB64: Buffer.from(bytes).toString('base64') }),
   });

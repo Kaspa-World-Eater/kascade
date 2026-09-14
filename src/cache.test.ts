@@ -7,7 +7,7 @@
  *   - reading a parcel marks it recently used, so a hot parcel is not the one dropped;
  *   - a parcel larger than the whole capacity is refused, not allowed to blow the budget.
  *
- * This is what lets Cascade drop into a Kaspa node: the operator sets a cap, and the cache lives
+ * This is what lets Kascade drop into a Kaspa node: the operator sets a cap, and the cache lives
  * inside it, forever. No cap, no drop-in.
  */
 import { test } from 'node:test';

@@ -1,7 +1,7 @@
 /**
  * One parcel of credit, and not a byte more.
  *
- * This is what makes Cascade trustless PER PARCEL, not only at the final settlement. A fount serves
+ * This is what makes Kascade trustless PER PARCEL, not only at the final settlement. A fount serves
  * the next parcel only when the gatherer has already signed a voucher covering everything it has
  * received so far — so the fount is ever owed at most a single parcel, and a gatherer that stops
  * paying is cut off after one. The gatherer, for its part, signs only for parcels it has already

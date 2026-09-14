@@ -31,7 +31,7 @@ function paidFount() {
 
 async function ask(url: string, fileId: string, index: number, v?: ReturnType<typeof voucher>, cid = COV) {
   const headers: Record<string, string> = v ? { 'x-voucher': JSON.stringify(v) } : {};
-  return fetch(`${url}/cascade/parcel?file=${fileId}&i=${index}&channel=${cid}`, { headers });
+  return fetch(`${url}/kascade/parcel?file=${fileId}&i=${index}&channel=${cid}`, { headers });
 }
 
 test('pay-as-you-go receives the whole file; stop paying and you are cut off after one parcel', async () => {

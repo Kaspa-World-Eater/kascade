@@ -47,7 +47,7 @@ async function main(): Promise<void> {
     return { ...p, key, f: fount({ held, priceSompi: PRICE }), url: '' };
   });
 
-  console.log(`\n  CASCADE — multi-fount money proof, live on Kaspa ${NETWORK}\n`);
+  console.log(`\n  KASCADE — multi-fount money proof, live on Kaspa ${NETWORK}\n`);
   console.log(`  a ${bytes.length.toLocaleString()}-byte file, ${m.parcels.length} parcels, across ${founts.length} founts — each starting at 0 KAS\n`);
 
   await Promise.all(founts.map((n) => new Promise<void>((r) => n.f.server.listen(0, '127.0.0.1', () => r()))));
@@ -94,7 +94,7 @@ async function main(): Promise<void> {
     rec.after = await balance(n.key.sk);
     console.log(`    ${n.name}  earned ${rec.earned.toLocaleString()} sompi  →  balance 0 → ${kas(rec.after)} KAS   (claim ${rec.claim.slice(0, 12)}…)`);
   }
-  console.log(`\n  PROVEN: several Cascade founts each earned real testnet KAS from one delivery.\n`);
+  console.log(`\n  PROVEN: several Kascade founts each earned real testnet KAS from one delivery.\n`);
 }
 
 main().catch((e: unknown) => { console.error(`\n  ${e instanceof Error ? e.message : String(e)}\n`); process.exit(1); });

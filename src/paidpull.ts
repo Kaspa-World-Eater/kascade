@@ -34,7 +34,7 @@ export async function paidPull(opts: PaidPullOptions): Promise<{ parcels: Map<nu
 
   for (const index of opts.indices) {
     const headers: Record<string, string> = voucher ? { 'x-voucher': JSON.stringify(voucher) } : {};
-    const res = await fetch(`${fountUrl}/cascade/parcel?file=${manifest.fileId}&i=${index}&channel=${channel.covenantId}`, { headers });
+    const res = await fetch(`${fountUrl}/kascade/parcel?file=${manifest.fileId}&i=${index}&channel=${channel.covenantId}`, { headers });
     if (!res.ok) throw new Error(`fount refused parcel ${index}: ${res.status} ${await res.text()}`);
     const bytes = new Uint8Array(await res.arrayBuffer());
     if (!verifyParcel(manifest, index, bytes)) throw new Error(`parcel ${index} failed the manifest -- not paid`);
@@ -45,7 +45,7 @@ export async function paidPull(opts: PaidPullOptions): Promise<{ parcels: Map<nu
   if (!voucher) throw new Error('no parcels requested');
 
   // Settle the last parcel: send the final voucher, which no further parcel request would carry.
-  const settle = await fetch(`${fountUrl}/cascade/voucher?channel=${channel.covenantId}`, { headers: { 'x-voucher': JSON.stringify(voucher) } });
+  const settle = await fetch(`${fountUrl}/kascade/voucher?channel=${channel.covenantId}`, { headers: { 'x-voucher': JSON.stringify(voucher) } });
   if (!settle.ok) throw new Error(`fount rejected the final voucher: ${settle.status}`);
   return { parcels, voucher, paidSompi };
 }

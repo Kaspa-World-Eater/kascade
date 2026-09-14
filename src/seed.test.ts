@@ -14,7 +14,7 @@ import { seed } from './seed.js';
 
 test('seed pushes a file to an accepting fount, and it gathers back byte-identical', async () => {
   const original = Uint8Array.from({ length: 200_000 }, (_, i) => (i * 3 + 1) % 251);
-  const tmp = join(tmpdir(), `cascade-seed-${Date.now()}.bin`);
+  const tmp = join(tmpdir(), `kascade-seed-${Date.now()}.bin`);
   writeFileSync(tmp, Buffer.from(original));
   const f = fount({ held: [], priceSompi: 1, acceptBytes: 1_000_000 });
   await new Promise<void>((r) => f.server.listen(0, '127.0.0.1', () => r()));
@@ -22,8 +22,8 @@ test('seed pushes a file to an accepting fount, and it gathers back byte-identic
   try {
     const r = await seed(tmp, [url]); // default 64 KB parcels -> 4 parcels
     assert.ok(r.parcels >= 3, 'split into parcels');
-    const manifest = await (await fetch(`${url}/cascade/manifest?file=${r.fileId}`)).json();
-    const have = (await (await fetch(`${url}/cascade/have`)).json()) as { fileId: string; indices: number[] }[];
+    const manifest = await (await fetch(`${url}/kascade/manifest?file=${r.fileId}`)).json();
+    const have = (await (await fetch(`${url}/kascade/have`)).json()) as { fileId: string; indices: number[] }[];
     const indices = have.find((h) => h.fileId === r.fileId)?.indices ?? [];
     const { bytes, receipt } = await fetchFile({ manifest, holders: [{ url, indices }], priceSompi: 1 });
     assert.equal(receipt.complete, true, 'the seeded fount serves the whole file');

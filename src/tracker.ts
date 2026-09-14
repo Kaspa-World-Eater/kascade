@@ -48,11 +48,11 @@ const send = (res: ServerResponse, code: number, body: unknown): void => {
   res.end(s);
 };
 
-/** Serve a Tracker over HTTP: POST /cascade/announce, GET /cascade/holders?file=<id>. */
+/** Serve a Tracker over HTTP: POST /kascade/announce, GET /kascade/holders?file=<id>. */
 export function trackerServer(tracker = new Tracker()): { server: Server; url: () => string; tracker: Tracker } {
   const server = createServer((req: IncomingMessage, res: ServerResponse) => {
     const u = new URL(req.url ?? '/', 'http://x');
-    if (req.method === 'POST' && u.pathname === '/cascade/announce') {
+    if (req.method === 'POST' && u.pathname === '/kascade/announce') {
       void readJson(req).then((b) => {
         const { fileId, url, indices } = b as { fileId: string; url: string; indices: number[] };
         tracker.announce(fileId, url, indices);
@@ -60,7 +60,7 @@ export function trackerServer(tracker = new Tracker()): { server: Server; url: (
       }).catch(() => send(res, 400, { error: 'bad announce' }));
       return;
     }
-    if (req.method === 'GET' && u.pathname === '/cascade/holders') {
+    if (req.method === 'GET' && u.pathname === '/kascade/holders') {
       return send(res, 200, tracker.holders(u.searchParams.get('file') ?? ''));
     }
     send(res, 404, { error: 'no such route' });
@@ -71,7 +71,7 @@ export function trackerServer(tracker = new Tracker()): { server: Server; url: (
 
 /** A fount tells the tracker what it holds. */
 export async function announceTo(trackerUrl: string, fileId: string, fountUrl: string, indices: number[]): Promise<void> {
-  await fetch(`${trackerUrl}/cascade/announce`, {
+  await fetch(`${trackerUrl}/kascade/announce`, {
     method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ fileId, url: fountUrl, indices }),
   });
@@ -79,6 +79,6 @@ export async function announceTo(trackerUrl: string, fileId: string, fountUrl: s
 
 /** A consumer asks who holds a file. */
 export async function discover(trackerUrl: string, fileId: string): Promise<Holder[]> {
-  const res = await fetch(`${trackerUrl}/cascade/holders?file=${encodeURIComponent(fileId)}`);
+  const res = await fetch(`${trackerUrl}/kascade/holders?file=${encodeURIComponent(fileId)}`);
   return (await res.json()) as Holder[];
 }

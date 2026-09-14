@@ -18,7 +18,7 @@ import type { Manifest } from './manifest.js';
 import { discover } from './tracker.js';
 import { gatherPaid, type PaidGatherResult } from './paidgather.js';
 
-const VDIR = join(homedir(), '.cascade', 'vouchers');
+const VDIR = join(homedir(), '.kascade', 'vouchers');
 
 /** Keep the highest voucher a fount has received on each channel -- that is what it later claims. */
 function saveVoucher(covenantId: string, v: Voucher): void {
@@ -52,10 +52,10 @@ const fetchJson = async <T>(url: string): Promise<T> => (await fetch(url)).json(
 /** GATHERER: open a channel with a fount and propose it, so the fount will serve on credit. */
 export async function openChannelWith(fountUrl: string, network: Network, escrowSompi: bigint, windowDaa: bigint): Promise<{ covenantId: string; genesisTxid: string }> {
   const me = identity('gatherer');
-  const { payoutPubkey } = await fetchJson<{ payoutPubkey: string | null }>(`${fountUrl}/cascade/identity`);
+  const { payoutPubkey } = await fetchJson<{ payoutPubkey: string | null }>(`${fountUrl}/kascade/identity`);
   if (!payoutPubkey) throw new Error('that fount advertises no payout identity -- it does not take paid channels');
   const { channel, txid } = await open(me.secretKeyHex, payoutPubkey, network, escrowSompi, windowDaa);
-  const res = await fetch(`${fountUrl}/cascade/propose`, {
+  const res = await fetch(`${fountUrl}/kascade/propose`, {
     method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ proposal: proposalFor(channel), buyerPubkey: me.publicKeyHex }),
   });
@@ -68,10 +68,10 @@ export async function getPaid(trackerUrl: string, fileId: string, network: Netwo
   const me = identity('gatherer');
   const holders = await discover(trackerUrl, fileId);
   if (holders.length === 0) throw new Error('no founts hold that file');
-  const manifest = await fetchJson<Manifest>(`${holders[0]?.url}/cascade/manifest?file=${fileId}`);
+  const manifest = await fetchJson<Manifest>(`${holders[0]?.url}/kascade/manifest?file=${fileId}`);
   const channelByFount: Record<string, { network: string; covenantId: string }> = {};
   for (const h of holders) {
-    const { payoutPubkey } = await fetchJson<{ payoutPubkey: string | null }>(`${h.url}/cascade/identity`);
+    const { payoutPubkey } = await fetchJson<{ payoutPubkey: string | null }>(`${h.url}/kascade/identity`);
     const rec = payoutPubkey ? channelWith(payoutPubkey) : null;
     if (rec) channelByFount[h.url] = { network: `kaspa:${network}`, covenantId: rec.channel.covenantId };
   }
@@ -82,7 +82,7 @@ export async function getPaid(trackerUrl: string, fileId: string, network: Netwo
 export async function ensureChannels(fountUrls: string[], network: Network, escrowSompi: bigint, windowDaa: bigint): Promise<number> {
   let opened = 0;
   for (const url of fountUrls) {
-    const { payoutPubkey } = await fetchJson<{ payoutPubkey: string | null }>(`${url}/cascade/identity`);
+    const { payoutPubkey } = await fetchJson<{ payoutPubkey: string | null }>(`${url}/kascade/identity`);
     if (payoutPubkey && !channelWith(payoutPubkey)) { await openChannelWith(url, network, escrowSompi, windowDaa); opened += 1; }
   }
   return opened;

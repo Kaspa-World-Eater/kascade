@@ -1,4 +1,4 @@
-# cascade
+# kascade
 
 **A paid, self-verifying delivery Meridian on Kaspa. Many devices each hold pieces of a file; you pull
 them in parallel and pay each device for the pieces it served — and a device that serves junk is
@@ -9,7 +9,7 @@ seller into a **network**. Which is to say: it's BitTorrent with the one thing B
 a way to *pay the seeders*, per piece, as the bytes arrive. The bytes move peer-to-peer over the
 ordinary internet; only the money touches the chain, and it's tiny.
 
-**→ [Read what Cascade is, in one page](https://kaspahttp402.github.io/cascade/)** — what it is, what it replaces, why Kaspa, and why it matters for sovereignty.
+**→ [Read what Kascade is, in one page](https://kaspahttp402.github.io/kascade/)** — what it is, what it replaces, why Kaspa, and why it matters for sovereignty.
 
 ## Why Kaspa — not as a slogan, as the reason it can exist
 
@@ -58,7 +58,7 @@ npm test          # 10 tests, incl. "a file reassembles byte-for-byte from three
 
 ```bash
 npm install
-npm run cascade demo    # a whole Meridian, live, in one process -- nothing mocked
+npm run kascade demo    # a whole Meridian, live, in one process -- nothing mocked
 ```
 
 `demo` starts four real HTTP founts (one of them lying), splits a real file across them, and gathers
@@ -79,8 +79,8 @@ One honest constraint surfaced and is documented: a fount cannot claim **dust** 
 below roughly 0.02 KAS trips Kaspa's KIP-9 storage-mass limit (a tiny output is expensive), so a fount
 accumulates earnings and settles in meaningful amounts, the way a Lightning channel is not closed over pennies.
 
-The real commands are there too: `cascade tracker`, `cascade fount <dir> --tracker <url>`, and
-`cascade get <trackerUrl> <fileId>` run founts and gatherers as separate processes.
+The real commands are there too: `kascade tracker`, `kascade fount <dir> --tracker <url>`, and
+`kascade get <trackerUrl> <fileId>` run founts and gatherers as separate processes.
 
 ## Status
 

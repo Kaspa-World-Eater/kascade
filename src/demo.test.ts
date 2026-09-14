@@ -1,6 +1,6 @@
 /**
  * The live proof, pinned: the whole Meridian in one process delivers byte-identical and catches the
- * liar. If this ever goes red, `cascade demo` is lying, and the project's central claim is broken.
+ * liar. If this ever goes red, `kascade demo` is lying, and the project's central claim is broken.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

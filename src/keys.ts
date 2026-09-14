@@ -21,7 +21,7 @@ import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { publicKeyHex } from 'metered-protocol';
 
-const HOME = join(homedir(), '.cascade');
+const HOME = join(homedir(), '.kascade');
 
 export type Role = 'gatherer' | 'fount';
 

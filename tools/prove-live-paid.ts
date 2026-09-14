@@ -39,7 +39,7 @@ async function main(): Promise<void> {
   const all = new Map(m.parcels.map((p) => [p.index, bytes.subarray(p.index * m.parcelSize, p.index * m.parcelSize + p.size)]));
   const layout = [{ name: 'fount-A', holds: [0, 1, 2, 3, 4] }, { name: 'fount-B', holds: [5, 6, 7, 8, 9] }, { name: 'fount-C', holds: [10, 11, 12, 13] }];
 
-  console.log(`\n  CASCADE — PER-PARCEL money proof, live on Kaspa ${NETWORK}\n`);
+  console.log(`\n  KASCADE — PER-PARCEL money proof, live on Kaspa ${NETWORK}\n`);
   console.log(`  a ${bytes.length.toLocaleString()}-byte file, ${m.parcels.length} parcels, across ${layout.length} founts that enforce the 402 rule\n`);
 
   // Open a channel per fount FIRST (its covenant id is what the fount's credit gate checks), then

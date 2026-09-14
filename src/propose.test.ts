@@ -1,7 +1,7 @@
 /**
  * A real paid fount advertises WHO to pay and only extends credit on a channel it has ACCEPTED.
  * A gatherer proposes its channel (verified by the fount before a byte is served); until it does,
- * paid delivery is refused. This is the handshake a `cascade channel open` will drive.
+ * paid delivery is refused. This is the handshake a `kascade channel open` will drive.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -39,7 +39,7 @@ test('a fount advertises its payout identity', async () => {
   await listen(f.server);
   const url = `http://127.0.0.1:${(f.server.address() as AddressInfo).port}`;
   try {
-    const id = await (await fetch(`${url}/cascade/identity`)).json();
+    const id = await (await fetch(`${url}/kascade/identity`)).json();
     assert.equal(id.payoutPubkey, payout);
   } finally { await close(f.server); }
 });
@@ -53,7 +53,7 @@ test('paid delivery is refused until the channel is proposed, then it works', as
       () => paidPull({ fountUrl: url, manifest: m, indices: [0, 1], channel, buyerSk, priceSompi: 1 }),
       /402/, 'no credit before the channel is accepted',
     );
-    const res = await fetch(`${url}/cascade/propose`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ proposal: { covenantId: COV }, buyerPubkey: buyerPk }) });
+    const res = await fetch(`${url}/kascade/propose`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ proposal: { covenantId: COV }, buyerPubkey: buyerPk }) });
     assert.equal(res.status, 200, 'the fount accepts the proposal');
     const out = await paidPull({ fountUrl: url, manifest: m, indices: [0, 1], channel, buyerSk, priceSompi: 1 });
     assert.equal(out.parcels.size, 2, 'now it serves, paid per parcel');
