@@ -24,6 +24,8 @@ import { seed } from '../src/seed.js';
 import { walletState, awaitFunds, faucetFor } from '../src/wallet.js';
 import type { Role } from '../src/keys.js';
 import { webapp } from '../src/webapp.js';
+import { startDhtNode, holdersViaDht, dhtClient, peerOf } from '../src/dhtserver.js';
+import { idFromHex } from '../src/distance.js';
 
 const argv = process.argv.slice(2);
 const [command, ...rest] = argv;
@@ -71,7 +73,8 @@ async function tracker(): Promise<void> {
 async function serveFount(): Promise<void> {
   const dir = positional[0];
   const trackerUrl = flag('tracker', '');
-  if (!dir || !trackerUrl) { console.error('usage: kascade fount <dir> --tracker <url> [--price N]'); process.exit(1); }
+  const dhtUrl = flag('dht', '');
+  if (!dir || (!trackerUrl && !dhtUrl)) { console.error('usage: kascade fount <dir> (--tracker <url> | --dht <nodeUrl>) [--price N]'); process.exit(1); }
   const root = resolve(dir);
   const names = readdirSync(root).filter((f) => { const s = statSync(join(root, f)); return s.isFile() && s.size > 0; });
   const files = names.map((name) => ({ name, bytes: new Uint8Array(readFileSync(join(root, name))) }));
@@ -91,28 +94,40 @@ async function serveFount(): Promise<void> {
 }
 
 async function get(): Promise<void> {
-  const [trackerUrl, fileId] = positional;
-  if (!trackerUrl || !fileId) { console.error('usage: kascade get <trackerUrl> <fileId> [--out FILE] [--pay]'); process.exit(1); }
+  const dhtUrl = flag('dht', '');
+  const [p0, p1] = positional;
+  const fileId = (dhtUrl ? p0 : p1) ?? '';
+  const trackerUrl = (dhtUrl ? '' : p0) ?? '';
+  if (!fileId || (!dhtUrl && !trackerUrl)) { console.error('usage: kascade get <trackerUrl> <fileId>  |  kascade get --dht <nodeUrl> <fileId>  [--pay [--auto]] [--out FILE]'); process.exit(1); }
+
+  const dhtHolders = dhtUrl ? await holdersViaDht(await dhtClient(dhtUrl, 'seeker'), fileId) : undefined;
+  if (dhtHolders && dhtHolders.length === 0) { console.error('no founts hold that file (per the DHT)'); process.exit(1); }
+
   if (has('pay')) {
     if (has('auto')) {
-      const urls = (await discover(trackerUrl, fileId)).map((h) => h.url);
+      const urls = (dhtHolders ?? await discover(trackerUrl, fileId)).map((h) => h.url);
       const opened = await ensureChannels(urls, NET, BigInt(Math.round(Number(flag('escrow', '0.5')) * 1e8)), BigInt(num('window', 3600)));
-      if (opened) console.log(`\n  opened ${opened} channel(s) for this gather`);
+      if (opened) console.log(`
+  opened ${opened} channel(s) for this gather`);
     }
-    const res = await getPaid(trackerUrl, fileId, NET, num('price', 2));
+    const res = await getPaid(trackerUrl, fileId, NET, num('price', 2), dhtHolders);
     if (res.complete) writeFileSync(flag('out', 'download.bin'), res.bytes);
     const paid = Object.values(res.perFount).reduce((n, p) => n + p.sompi, 0);
-    console.log(`\n  paid gather ${res.complete ? 'complete' : 'INCOMPLETE'} across ${Object.keys(res.perFount).length} fount(s)`);
-    console.log(`  paid ${paid.toLocaleString()} sompi (${kas(paid)} KAS), per parcel, over your open channels\n`);
+    console.log(`
+  paid gather ${res.complete ? 'complete' : 'INCOMPLETE'} across ${Object.keys(res.perFount).length} fount(s)`);
+    console.log(`  paid ${paid.toLocaleString()} sompi (${kas(paid)} KAS), per parcel${dhtUrl ? ', discovered via the DHT' : ''}
+`);
     process.exit(0);
   }
-  const holders = await discover(trackerUrl, fileId);
+  const holders = dhtHolders ?? await discover(trackerUrl, fileId);
   const anyUrl = holders[0]?.url;
   if (!anyUrl) { console.error('no founts hold that file'); process.exit(1); }
   const manifest = await (await fetch(`${anyUrl}/kascade/manifest?file=${fileId}`)).json();
   const { bytes, receipt } = await fetchFile({ manifest, holders, priceSompi: num('price', 2), concurrency: 4 });
   if (receipt.complete) writeFileSync(flag('out', manifest.name), bytes);
-  console.log(`\n  gathered ${receipt.parcelsGot}/${manifest.parcels.length} parcels; ${receipt.complete ? 'wrote it' : 'INCOMPLETE'}; owed ${receipt.totalSompi.toLocaleString()} sompi\n`);
+  console.log(`
+  gathered ${receipt.parcelsGot}/${manifest.parcels.length} parcels; ${receipt.complete ? 'wrote it' : 'INCOMPLETE'}${dhtUrl ? ' (via DHT)' : ''}
+`);
   process.exit(0);
 }
 
@@ -208,7 +223,16 @@ async function appCmd(): Promise<void> {
 `);
 }
 
-const COMMANDS: Record<string, () => Promise<void>> = { demo, tracker, fount: serveFount, get, publish, channel, channels: channelsList, claim: claimCmd, refund: refundCmd, wallet: walletCmd, fund: fundCmd, app: appCmd };
+async function dhtnode(): Promise<void> {
+  const boot = flag('bootstrap', '');
+  const { url, node } = await startDhtNode(boot ? [peerOf(boot)] : [], num('port', 0));
+  if (boot) await node.join(peerOf(boot));
+  console.log(`
+  DHT node on ${url}${boot ? `  (joined via ${boot})` : '  (bootstrap)'}   (Ctrl+C to stop)
+`);
+}
+
+const COMMANDS: Record<string, () => Promise<void>> = { demo, tracker, fount: serveFount, get, publish, channel, channels: channelsList, claim: claimCmd, refund: refundCmd, wallet: walletCmd, fund: fundCmd, app: appCmd, dhtnode };
 const run = COMMANDS[command ?? ''];
-if (!run) { console.error('kascade: demo | tracker | fount [--paid] | publish <file> --to <urls> | get [--pay] | wallet | fund | app | channel open | channels | claim | refund'); process.exit(1); }
+if (!run) { console.error('kascade: demo | tracker | fount [--paid] | publish <file> --to <urls> | get [--pay] | wallet | fund | app | dhtnode | channel open | channels | claim | refund'); process.exit(1); }
 run().catch((e: unknown) => { console.error(`\n  ${e instanceof Error ? e.message : String(e)}\n`); process.exit(1); });

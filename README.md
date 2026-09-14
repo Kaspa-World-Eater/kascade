@@ -108,19 +108,36 @@ That one needs WebRTC/NAT traversal that is not built (see the honest hard parts
 says so. What ships today is real and works against the live network; the passive mobile app does not
 exist yet.
 
+## Finding founts without a tracker (the DHT)
+
+The tracker is a single list of who-holds-what. kascade also has a Kademlia **DHT** that distributes
+that list — each node keeps only the records nearest its own id, and any node finds a file's providers
+by walking toward the file's id. Run one and point founts and gatherers at it:
+
+```
+kascade dhtnode                                  # a DHT node (add --bootstrap <url> to join an existing one)
+kascade fount <dir> --dht <nodeUrl> --price 0    # a fount that announces what it holds into the DHT
+kascade get  --dht <nodeUrl> <fileId> [--pay]    # resolve providers via the DHT, no tracker
+```
+
+Proven with no central list: `tools/prove-dht.ts` stands up a DHT of HTTP nodes and founts, and a
+gatherer that knows only one bootstrap node resolves every fount and reassembles the file
+byte-identical. (The DHT is off-chain, so this needs no testnet.)
+
 ## Status
 
-The Meridian runs end to end in-process: a file reassembles byte-identical from three founts pulled at
-once, each paid for its share; a fourth fount serving corrupted bytes is caught by the manifest,
-paid nothing, and routed around; stopping partway pays only for what arrived. Payment amounts are real
-and per-fount; on-chain settlement is spigot's rail — one kaspa-x402 channel per fount — which
-`settlement.ts` produces the plan for.
+The Meridian runs end to end: a file reassembles byte-identical from several founts pulled at once,
+each paid for its share; a fount serving corrupted bytes is caught by the manifest, paid nothing, and
+routed around; stopping partway pays only for what arrived. Payment is real and per-fount on the
+kaspa-x402 rail — one channel per fount — and a channel is **reused** across gathers and **survives a
+fount restart** (both proven live on testnet-10). Discovery runs either through the tracker or the DHT.
 
 **The honest hard parts, named not faked:**
 - **Getting bytes between phones.** Carrier-grade NAT hides mobile devices; two phones can't just
   connect. This needs relays or hole-punching and is the single biggest engineering risk. PCs, routers
   and relays likely carry the early network; phones start as consumers and Wi-Fi cache-holders.
-- **A real DHT** to replace the central tracker, so there's no central list at all.
+- **A DHT that survives churn.** The DHT works (above), but production needs record expiry/republish,
+  liveness eviction from full buckets, and the NAT layer so nodes on real networks can reach each other.
 - **Supply needs demand** — one real buyer matters more than a thousand idle nodes.
 
 Part of the suite: [metered](https://github.com/kaspahttp402/metered-protocol) (the rail) ·

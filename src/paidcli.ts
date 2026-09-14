@@ -15,7 +15,7 @@ import { open, claim, recall, channelWith, sellerChannels, refund, vouchedOn, bu
 import { stock, type StockFile } from './stock.js';
 import type { FountOptions, CreditContext } from './fount.js';
 import type { Manifest } from './manifest.js';
-import { discover } from './tracker.js';
+import { discover, type Holder } from './tracker.js';
 import { gatherPaid, type PaidGatherResult } from './paidgather.js';
 
 const VDIR = join(homedir(), '.kascade', 'vouchers');
@@ -88,9 +88,9 @@ export async function openChannelWith(fountUrl: string, network: Network, escrow
 }
 
 /** GATHERER: gather a file, paying each fount per parcel over the channel already open with it. */
-export async function getPaid(trackerUrl: string, fileId: string, network: Network, priceSompi: number): Promise<PaidGatherResult> {
+export async function getPaid(trackerUrl: string, fileId: string, network: Network, priceSompi: number, preResolved?: Holder[]): Promise<PaidGatherResult> {
   const me = identity('gatherer');
-  const holders = await discover(trackerUrl, fileId);
+  const holders = preResolved ?? await discover(trackerUrl, fileId);
   if (holders.length === 0) throw new Error('no founts hold that file');
   const manifest = await fetchJson<Manifest>(`${holders[0]?.url}/kascade/manifest?file=${fileId}`);
   const channelByFount: Record<string, { network: string; covenantId: string }> = {};
