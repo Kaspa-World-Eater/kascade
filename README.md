@@ -108,6 +108,21 @@ That one needs WebRTC/NAT traversal that is not built (see the honest hard parts
 says so. What ships today is real and works against the live network; the passive mobile app does not
 exist yet.
 
+## Publisher-pays: the viewer watches for free
+
+The market the one-pager describes — a publisher funds delivery, the crowd earns, the viewer never
+pays — now exists in code, not just on the page. The viewer gathers a file for **free** and signs a
+**receipt** (`src/receipt.ts`) for each parcel it verifies against the manifest; founts collect those
+receipts and are settled from the **publisher's budget** (`src/publisherpays.ts`), never from the
+viewer. A fount that serves junk earns no receipt; a claim below the KIP-9 dust floor is held; nothing
+exceeds the budget. Proven end to end in-process (`src/receiptgather.test.ts`): three real founts, one
+lying, a viewer that pays **zero**, the liar unpaid, the file byte-identical.
+
+**The honest limit, named:** a receipt proves the viewer *says* it received a parcel — not that the
+viewer is a real, distinct person. A fount colluding with a fake viewer can mint receipts for a budget.
+Signatures and covenants cannot separate a real consumer from a sock puppet; that is a sybil/reputation
+problem, still open. What is closed: no pay for junk, no double-count of a parcel, and the viewer pays nothing.
+
 ## Finding founts without a tracker (the DHT)
 
 The tracker is a single list of who-holds-what. kascade also has a Kademlia **DHT** that distributes

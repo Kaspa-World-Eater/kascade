@@ -13,6 +13,8 @@
     "kascade": "tsx bin/kascade.ts"
   },
   "dependencies": {
+    "@noble/curves": "^1.9.7",
+    "@noble/hashes": "^1.8.0",
     "metered-protocol": "^2.0.0"
   },
   "devDependencies": {
