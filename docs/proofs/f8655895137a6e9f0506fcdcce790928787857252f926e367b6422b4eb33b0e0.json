@@ -1,0 +1,45 @@
+{
+ "txid": "f8655895137a6e9f0506fcdcce790928787857252f926e367b6422b4eb33b0e0",
+ "network": "testnet-10",
+ "kind": "batch-genesis",
+ "explorer": "https://explorer-tn10.kaspa.org/txs/f8655895137a6e9f0506fcdcce790928787857252f926e367b6422b4eb33b0e0",
+ "submittedAt": "2026-09-22T11:14:28.297Z",
+ "virtualDaaScore": "577427999",
+ "transaction": {
+  "version": 1,
+  "inputs": [
+   {
+    "previousOutpoint": {
+     "txid": "51ffeb60bd06ba0f7c0902f0e17f016f9a6ba898da9d6a9536050deb455c9fa6",
+     "index": 0
+    },
+    "signatureScript": "41161ff887c8b20808af8164b6c64662d8d8a32adfb69a7e99e16b18126f9fba320a3a5a45fee42bf6630326fc0a9fc5ce0973e2004f11bc4d2f91c09666263d7401",
+    "sequence": "0",
+    "computeBudget": 10,
+    "utxo": {
+     "amount": "50500000",
+     "scriptPublicKey": "000020c73ea6d6e8657f7bc010790c9151c318c161c14ff8e56bb97c566882f89eb824ac",
+     "blockDaaScore": "0",
+     "isCoinbase": false,
+     "covenantId": null
+    }
+   }
+  ],
+  "outputs": [
+   {
+    "amount": "50000000",
+    "scriptPublicKey": "0000aa20cd340c69f08b79fdedb1350573dc4acd7225f2fd9df1d870a37ba02e47e6797187",
+    "covenant": {
+     "authorizingInput": 0,
+     "covenantId": "dddba901af28234aac4f2f75d69d7e01c516bdd7f27167179bbc8856fe698de8"
+    }
+   }
+  ],
+  "lockTime": "0",
+  "subnetworkId": "0000000000000000000000000000000000000000",
+  "gas": "0",
+  "payload": "",
+  "mass": "60199",
+  "estimatedSerializedSize": 301
+ }
+}

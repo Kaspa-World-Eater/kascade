@@ -67,8 +67,11 @@ the liar get **tried first, rejected by the manifest, and routed around**; the f
 **byte-identical**; and each fount paid only for the parcels it actually served -- the liar earning
 nothing (a recorded fault -- seizing a bond on-chain is designed in quorum, not built). It is pinned by a test, so it cannot quietly break.
 
-**The money is proven on chain — per parcel, and independently verifiable.** Each claim below is a
-full transaction id anyone can check on a public testnet-10 node:
+**The money is proven on chain — per parcel, and independently verifiable.** Every claim below is a
+full transaction id, linked to the explorer, and archived as `docs/proofs/<txid>.json` the moment the
+node accepted it. All of it was re-run on 2026-09-22: the public testnet-10 index serves only about
+the last six days, so the previous run's ids had stopped resolving and were no longer proof of
+anything. Check any of them yourself while they last:
 
 ```bash
 curl -s https://api-tn10.kaspa.org/transactions/<txid> | grep -o '"is_accepted":[a-z]*'   # -> "is_accepted":true
@@ -80,17 +83,17 @@ parcel as each verifies**; each fount then claims its share of real KAS.
 
 | fount | earned | verifiable claim txid |
 |---|---|---|
-| A | 0.06053600 KAS (5 parcels) | `5c9c391131200f839b8549dfadd1fab260a03c6e2bc47d8bdd151c1a65b3058a` |
-| B | 0.06053600 KAS (5 parcels) | `cedc523c2f399fe2ea07690f47b7aa9d0ad6de1434d9e020691334b951601465` |
-| C | 0.04392800 KAS (4 parcels) | `b20cba8953cac1fd4f135cab9aecd0e7fd13f9a3f218f58afa5947ed2b1fa1df` |
+| A | 0.06053600 KAS (5 parcels) | [`dfe2d140ad59e0d438a90f04c5b674cc80972cd3cdf091fea6275e134a2040f5`](https://explorer-tn10.kaspa.org/txs/dfe2d140ad59e0d438a90f04c5b674cc80972cd3cdf091fea6275e134a2040f5) |
+| B | 0.06053600 KAS (5 parcels) | [`6ce25038b2286eb15748a56b2ff7eab90169a376412be2b964fd72386d79c5c8`](https://explorer-tn10.kaspa.org/txs/6ce25038b2286eb15748a56b2ff7eab90169a376412be2b964fd72386d79c5c8) |
+| C | 0.04392800 KAS (4 parcels) | [`6a6bfcf28b3b7759efde1ac94cc90711ca54ecd11feaa2965527599100761af3`](https://explorer-tn10.kaspa.org/txs/6a6bfcf28b3b7759efde1ac94cc90711ca54ecd11feaa2965527599100761af3) |
 
 (A single fount start-to-finish is `tools/prove-live.ts`, which prints its own full genesis and claim ids.)
 
 **Channel reuse and fount-restart survival are proven on chain too.** `tools/prove-live-reuse.ts`
 gathers a file over **one** channel in two passes and settles the cumulative total in a single claim —
-`ccce1de7b0b607e4a7d96a76dea412f1398d89abf72f44157568a286aa9843ab` (0.175 KAS). `tools/prove-live-restart.ts`
+[`cdb84ef8f030041d03d588099bd59c27fa6a0dac1856495ab9a907b335e54ab7`](https://explorer-tn10.kaspa.org/txs/cdb84ef8f030041d03d588099bd59c27fa6a0dac1856495ab9a907b335e54ab7) (0.175 KAS). `tools/prove-live-restart.ts`
 kills the fount mid-channel, restarts it, finishes the gather over the same channel, and claims —
-`436afd3149f5b9f7e5a6b69305a91c291a6ca1f379fceb67003f31388bcfd254` (0.175 KAS).
+[`145851df950734a0b09eca7c8554c076d2abd9e00c1e442cc1748bbeb89f23cf`](https://explorer-tn10.kaspa.org/txs/145851df950734a0b09eca7c8554c076d2abd9e00c1e442cc1748bbeb89f23cf) (0.175 KAS).
 
 One honest constraint is documented: a fount cannot claim **dust** — a payout below roughly 0.02 KAS
 trips Kaspa's KIP-9 storage-mass limit (a tiny output is expensive) — so a fount accumulates earnings and
@@ -138,7 +141,7 @@ lying, a viewer that pays **zero**, the liar unpaid, the file byte-identical.
 **Proven on chain.** `npx tsx tools/prove-live-publisher.ts` runs it live on testnet-10: a publisher
 funds a 0.5 KAS budget, an **unfunded** viewer (an ephemeral key, no wallet) gathers the whole file
 over the receipt handshake paying **zero**, and the fount claims what it earned from the publisher —
-`b6a7768380d217d4b4094c2a83dd14b43e1d46fa4807067350f45de94156745c` (0.175 KAS, verifiable on the TN10 API).
+[`e96b0776c439dfbc50375a72c115e7f9dbe066f7efe293be8ffc00e0cc47059d`](https://explorer-tn10.kaspa.org/txs/e96b0776c439dfbc50375a72c115e7f9dbe066f7efe293be8ffc00e0cc47059d) (0.175 KAS, verifiable on the TN10 API).
 
 **The honest limit, named:** a receipt proves the viewer *says* it received a parcel — not that the
 viewer is a real, distinct person. A fount colluding with a fake viewer can mint receipts for a budget.
